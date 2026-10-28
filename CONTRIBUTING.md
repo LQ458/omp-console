@@ -46,6 +46,14 @@ On success, the script updates `workspaces.catalog`, `patchedDependencies`, the 
 
 The sync report writes both formats beside the requested path (for example, `.omp-sync-18.13.2.md` and `.omp-sync-18.13.2.json`). Never copy a fork diff forward by hand; preserve only console integration that the ledger ties to a live console path and test.
 
+## Releases
+
+1. Set the same version in `apps/mac/tauri.conf.json` and `apps/mac/Cargo.toml`. The Windows MSI accepts only numeric versions (`major.minor.patch`, optionally `-<number>`), so do not use `-beta` style suffixes.
+2. Write the release notes in `docs/releases/v<version>.md`.
+3. Optionally run the [Release workflow](.github/workflows/release.yml) by hand first; it builds every package as workflow artifacts without creating a release.
+4. Push the tag `v<version>`. The workflow checks that the tag matches the app version and the notes exist, builds the macOS, Windows, and Linux apps, writes `SHA256SUMS.txt`, and creates a **draft** pre-release.
+5. Download and try the assets, then publish the draft on GitHub.
+
 ## Third-party notices
 
 Run `bun scripts/gen-licenses.ts` after `bun install --frozen-lockfile`. It reads the Bun lockfile and installed workspace packages, resolves macOS Cargo metadata and Android npm/Gradle dependencies, then writes `licenses/THIRD-PARTY-NOTICES.md` and `packages/web/public/licenses.txt`. The Android dependencies are synchronized as needed; Cargo and Gradle may fetch their pinned metadata on first use. Run it twice and confirm the outputs do not change.

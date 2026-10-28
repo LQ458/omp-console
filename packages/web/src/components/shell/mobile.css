@@ -1383,6 +1383,10 @@
 	min-height: 0;
 	overflow-y: auto;
 	overscroll-behavior: contain;
+	/* A scroll box clips on every side; this inset keeps the 3px focus ring of the answer box and options visible
+	   without moving the content. */
+	padding: 4px;
+	margin: -4px;
 }
 
 .sh-ask-help {

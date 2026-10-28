@@ -13,7 +13,7 @@ describe("quota presentation", () => {
 
 	it("formats reset countdowns at seconds, minutes, hours, and days", () => {
 		expect(formatResetCountdown(1_000, 0)).toBe("1s");
-		expect(formatResetCountdown(61_000, 0)).toBe("1m 1s");
+		expect(formatResetCountdown(61_000, 0)).toBe("1m");
 		expect(formatResetCountdown(3_661_000, 0)).toBe("1h 1m");
 		expect(formatResetCountdown(90_000_000, 0)).toBe("1d 1h");
 		expect(formatResetCountdown(0, 0)).toBe("reset now");

@@ -15,7 +15,7 @@ DEFAULT_STATE_DIR = Path("/tmp/omp-console-nightly/macapp")
 STATE_ENV = "OMP_CONSOLE_AUTOMATION_STATE_DIR"
 MAC_DIR = Path(__file__).resolve().parents[1]
 APP_PATH = MAC_DIR / "dist" / "omp console.app"
-APP_EXECUTABLE = APP_PATH / "Contents" / "MacOS" / "deck-mac"
+APP_EXECUTABLE = APP_PATH / "Contents" / "MacOS" / "omp-console-desktop"
 
 
 class DriveError(RuntimeError):

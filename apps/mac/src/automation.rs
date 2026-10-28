@@ -1,8 +1,11 @@
+#[cfg(unix)]
+use std::{
+	ffi::OsString,
+	os::unix::fs::{MetadataExt, PermissionsExt},
+};
 use std::{
 	collections::HashMap,
-	ffi::OsString,
 	fs,
-	os::unix::fs::{MetadataExt, PermissionsExt},
 	path::{Path, PathBuf},
 	sync::{
 		Mutex,
@@ -93,10 +96,21 @@ enum SnapshotMethod {
 	ScreenCapture,
 }
 
+#[cfg(unix)]
 pub fn directory_from_env() -> Result<Option<PathBuf>, String> {
 	directory_from_value(std::env::var_os("OMP_CONSOLE_AUTOMATION_DIR"), unsafe { libc::geteuid() })
 }
 
+/// The hook trusts the directory only after an owner and mode check that has no Windows equivalent here, so it stays off.
+#[cfg(not(unix))]
+pub fn directory_from_env() -> Result<Option<PathBuf>, String> {
+	match std::env::var_os("OMP_CONSOLE_AUTOMATION_DIR") {
+		None => Ok(None),
+		Some(_) => Err("the automation hook is not supported on this platform".to_string()),
+	}
+}
+
+#[cfg(unix)]
 fn directory_from_value(
 	value: Option<OsString>,
 	expected_uid: u32,
@@ -109,6 +123,7 @@ fn directory_from_value(
 	Ok(Some(path))
 }
 
+#[cfg(unix)]
 fn validate_directory(path: &Path, expected_uid: u32) -> Result<(), String> {
 	// lstat: the directory itself, never a symlink to one (its target could be swapped later).
 	let metadata = fs::symlink_metadata(path)
@@ -145,6 +160,7 @@ pub fn prepare_directory(path: &Path) -> Result<(), String> {
 				return Err(format!("could not inspect automation {name} directory: {error}"));
 			},
 		}
+		#[cfg(unix)]
 		fs::set_permissions(&child, fs::Permissions::from_mode(0o700))
 			.map_err(|error| format!("could not secure automation {name} directory: {error}"))?;
 	}
@@ -600,7 +616,7 @@ fn native_window_number(window: &WebviewWindow) -> Result<u32, String> {
 }
 
 
-#[cfg(test)]
+#[cfg(all(test, unix))]
 mod tests {
 	use std::{
 		fs,

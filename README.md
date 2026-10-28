@@ -13,9 +13,17 @@ Captured from the local mock daemon with WebKit fixtures; no live agent or model
 | ![Desktop, light theme](docs/screenshots/desktop-light.png) | ![Phone, light theme](docs/screenshots/phone-light.png) |
 | ![Desktop, dark theme](docs/screenshots/desktop-dark.png) | ![Phone, dark theme](docs/screenshots/phone-dark.png) |
 
+## Quick start
+
+- **Step-by-step guide** for macOS, Linux, and Windows (WSL 2): [docs/INSTALL.md](docs/INSTALL.md).
+- **Let a coding agent install it**: paste the prompt in [docs/INSTALL-WITH-AN-AGENT.md](docs/INSTALL-WITH-AN-AGENT.md) into omp, Claude Code, or Codex.
+- **Desktop apps** (macOS, Windows, Linux) are on the [Releases page](https://github.com/LQ458/omp-console/releases). They are windows onto the local service, so install the service first.
+
+The sections below are the short reference.
+
 ## Requirements
 
-- macOS or Linux for the daemon host. Both can use the native Tauri desktop app (Linux: `.deb` or AppImage, see [apps/mac/README.md](apps/mac/README.md#linux-desktop-app)) or any browser/PWA.
+- macOS or Linux for the daemon host; on Windows, the daemon runs inside WSL 2 (see the [guide](docs/INSTALL.md#windows-set-up-wsl-first)). Native Tauri desktop apps exist for macOS, Windows, and Linux (`.deb` or AppImage), or use any browser/PWA.
 - Bun 1.4 or newer (`bun upgrade` if older: older releases cannot read the lockfile and build a blank web UI). The installer checks the version and uses that Bun for the build and the service; CI tests Bun 1.4.3.
 - `omp` installed; the first-run checklist checks the executable, version, available model credentials, existing omp sessions, and Claude Code history. The installer does not inspect credentials or make model calls.
 - Tailscale is optional for phone access; the supported remote path is Tailscale Serve.
@@ -70,7 +78,7 @@ Tailscale Serve is the only supported remote-access path. Do not use Tailscale F
 - Optional Overnight run keeps a session working until its deadline, retries recoverable failures, and produces a morning report; best-effort only, with platform-specific keep-awake support.
 - Shared sessions on the host and phone, with a responsive PWA and optional Android WebView shell.
 - Push notifications for supported session events, plus local transcript caching.
-- A native desktop app for macOS and Linux built with Tauri and the system WebView.
+- A native desktop app for macOS, Windows, and Linux built with Tauri and the system WebView.
 
 ## Optional features
 

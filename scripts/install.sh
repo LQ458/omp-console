@@ -180,7 +180,7 @@ if [ "$DRY_RUN" -eq 1 ]; then
 	if [ "$SYSTEMD" -eq 1 ]; then
 		printf 'Would render %s into %s with ExecStart=%s/packages/daemon/src/main.ts --web-dir %s/packages/web/dist and OMP_CONSOLE_SUPERVISED=1.\n' \
 			"$SYSTEMD_TEMPLATE" "$SYSTEMD_UNIT_FILE" "$BUN_PATH" "$REPO_ROOT"
-		printf 'Would run: systemctl --user daemon-reload && systemctl --user enable --now %s\n' "$SYSTEMD_UNIT_LABEL"
+		printf 'Would run: systemctl --user daemon-reload && systemctl --user enable %s && systemctl --user restart %s\n' "$SYSTEMD_UNIT_LABEL" "$SYSTEMD_UNIT_LABEL"
 		if [ -n "$OWNER" ]; then printf 'Remote identity: owner %s; allowed host(s): %s\n' "$OWNER" "${ALLOW_HOSTS[*]}"; fi
 	fi
 	if [ "$INSTALL_APP" -eq 1 ]; then
@@ -286,8 +286,10 @@ if [ "$SYSTEMD" -eq 1 ]; then
 	mv "$UNIT_TMP" "$SYSTEMD_UNIT_FILE"
 	trap - EXIT INT TERM
 	systemctl --user daemon-reload
-	systemctl --user enable --now "$SYSTEMD_UNIT_LABEL"
-	printf 'Installed and started %s\n' "$SYSTEMD_UNIT_FILE"
+	systemctl --user enable "$SYSTEMD_UNIT_LABEL"
+	# restart, not start: rerunning the installer after an update must replace a running daemon.
+	systemctl --user restart "$SYSTEMD_UNIT_LABEL"
+	printf 'Installed and (re)started %s\n' "$SYSTEMD_UNIT_FILE"
 fi
 
 if [ "$INSTALL_APP" -eq 1 ]; then

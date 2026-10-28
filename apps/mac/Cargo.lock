@@ -711,33 +711,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "deck-mac"
-version = "0.1.0"
-dependencies = [
- "base64 0.22.1",
- "block2",
- "libc",
- "objc2",
- "objc2-app-kit",
- "objc2-foundation",
- "objc2-web-kit",
- "open",
- "png",
- "reqwest 0.12.28",
- "ring",
- "security-framework",
- "serde",
- "serde_json",
- "tauri",
- "tauri-build",
- "tauri-plugin-deep-link",
- "tauri-plugin-dialog",
- "tauri-plugin-global-shortcut",
- "tauri-plugin-notification",
- "url",
-]
-
-[[package]]
 name = "defmt"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2530,6 +2503,33 @@ dependencies = [
  "objc2-app-kit",
  "objc2-core-foundation",
  "objc2-foundation",
+]
+
+[[package]]
+name = "omp-console-desktop"
+version = "0.1.0"
+dependencies = [
+ "base64 0.22.1",
+ "block2",
+ "libc",
+ "objc2",
+ "objc2-app-kit",
+ "objc2-foundation",
+ "objc2-web-kit",
+ "open",
+ "png",
+ "reqwest 0.12.28",
+ "ring",
+ "security-framework",
+ "serde",
+ "serde_json",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-deep-link",
+ "tauri-plugin-dialog",
+ "tauri-plugin-global-shortcut",
+ "tauri-plugin-notification",
+ "url",
 ]
 
 [[package]]

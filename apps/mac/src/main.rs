@@ -29,7 +29,11 @@ use url::{Host, Url};
 
 const DEFAULT_DAEMON_URL: &str = "http://127.0.0.1:7490/";
 const DEFAULT_STATE_DIR: &str = "~/.omp-console";
+/// The bundled retry page. WebView2 serves app assets from `http://tauri.localhost`, the other webviews from `tauri://localhost`.
+#[cfg(not(windows))]
 const APP_SCHEME_URL: &str = "tauri://localhost/index.html";
+#[cfg(windows)]
+const APP_SCHEME_URL: &str = "http://tauri.localhost/index.html";
 #[cfg(target_os = "macos")]
 /// Keychain item holding the PKCS#8 Ed25519 signing key; only omp console reads it (the daemon gets the public key only).
 const MOVE_KEY_SERVICE: &str = "omp-console-move-signing-key";
@@ -144,7 +148,11 @@ fn expand_state_dir(raw: &str) -> Result<PathBuf, String> {
 		return Err("Enter a state directory.".to_string());
 	}
 	let path = if raw == "~" || raw.starts_with("~/") {
-		let home = std::env::var_os("HOME").ok_or_else(|| "The home directory is unavailable.".to_string())?;
+		// Windows has no HOME; without this fallback the default `~/.omp-console` is invalid and every launch resets the
+		// saved configuration, including the daemon URL.
+		let home = std::env::var_os("HOME")
+			.or_else(|| std::env::var_os("USERPROFILE"))
+			.ok_or_else(|| "The home directory is unavailable.".to_string())?;
 		if raw == "~" { PathBuf::from(home) } else { PathBuf::from(home).join(&raw[2..]) }
 	} else {
 		PathBuf::from(raw)

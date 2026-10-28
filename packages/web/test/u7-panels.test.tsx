@@ -103,6 +103,15 @@ describe("quota summary", () => {
 		expect(details).toContain("Cache warming");
 		expect(details).toContain('aria-checked="true"');
 	});
+
+	it("marks every account stale with its last update time once the snapshot stopped refreshing", () => {
+		const fresh = renderToStaticMarkup(<QuotaPanel api={new DeckApi()} initial={quotaResponse()} />);
+		expect(fresh).not.toContain("last updated");
+		expect(fresh).not.toContain('data-stale="true"');
+		const old = renderToStaticMarkup(<QuotaPanel api={new DeckApi()} initial={{ ...quotaResponse(), updatedAt: Date.now() - 3 * 60_000 }} />);
+		expect(old).toContain("last updated");
+		expect(old).toContain('data-stale="true"');
+	});
 });
 
 describe("settings status summary", () => {

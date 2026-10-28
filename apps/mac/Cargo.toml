@@ -1,7 +1,7 @@
 [workspace]
 
 [package]
-name = "deck-mac"
+name = "omp-console-desktop"
 version = "0.1.0"
 description = "Native desktop shell for the omp-console daemon"
 authors = ["omp-console"]

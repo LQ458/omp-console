@@ -19,6 +19,8 @@ import {
 	moveEquivalentModel,
 	primaryUsageWindow,
 	quotaAdvice,
+	QUOTA_POLL_MS,
+	quotaSnapshotCurrent,
 	quotaStateLabel,
 	quotaTone,
 	removeEquivalentModel,
@@ -26,6 +28,7 @@ import {
 	reserveThreshold,
 	validateEquivalenceTable,
 } from "../../lib/quota";
+import { useNow } from "../agents/use-agent-graph";
 import { OmpLine } from "../spawn/OmpLine";
 import "./quota.css";
 
@@ -37,6 +40,8 @@ export interface QuotaPanelProps {
 
 export function QuotaPanel({ api, initial }: QuotaPanelProps): ReactNode {
 	const [quota, setQuota] = useState<QuotaResponse | null>(initial ?? null);
+	// When this device last received a snapshot; an `initial` snapshot counts as received when the daemon wrote it.
+	const [receivedAt, setReceivedAt] = useState(() => initial?.updatedAt ?? 0);
 	const [models, setModels] = useState<ListModelsResponse | null>(null);
 	const [table, setTable] = useState<EquivalenceTable>(initial?.equivalence ?? { tiers: [] });
 	const [loading, setLoading] = useState(initial === undefined);
@@ -51,6 +56,7 @@ export function QuotaPanel({ api, initial }: QuotaPanelProps): ReactNode {
 		try {
 			const [nextQuota, nextModels] = await Promise.all([api.quota(signal), api.listModels(signal)]);
 			setQuota(nextQuota);
+			setReceivedAt(Date.now());
 			setModels(nextModels);
 			setTable(nextQuota.equivalence);
 			setWarming(nextQuota.cacheWarming);
@@ -68,6 +74,37 @@ export function QuotaPanel({ api, initial }: QuotaPanelProps): ReactNode {
 		recordUsage({ feature: "8.quota", action: "open", outcome: "ok", via: "direct", screen: "quota" });
 		return () => controller.abort();
 	}, [load]);
+
+	// Keep the snapshot current while the panel stays open; only the quota is replaced, so an unsaved equivalence
+	// edit or a pending cache-warming change is never overwritten by a background refetch.
+	useEffect(() => {
+		const controller = new AbortController();
+		const poll = (): void => {
+			void api.quota(controller.signal).then(
+				next => {
+					setQuota(next);
+					setReceivedAt(Date.now());
+					setError(null);
+				},
+				(err: unknown) => {
+					if (!controller.signal.aborted) setError(err instanceof Error ? err.message : "Quota data could not be loaded.");
+				},
+			);
+		};
+		const timer = window.setInterval(poll, QUOTA_POLL_MS);
+		const onVisible = (): void => {
+			if (document.visibilityState === "visible") poll();
+		};
+		document.addEventListener("visibilitychange", onVisible);
+		return () => {
+			controller.abort();
+			window.clearInterval(timer);
+			document.removeEventListener("visibilitychange", onVisible);
+		};
+	}, [api]);
+	useNow(QUOTA_POLL_MS);
+	const now = Date.now();
+	const current = quota !== null && quotaSnapshotCurrent(receivedAt, now);
 
 	const validationError = useMemo(() => validateEquivalenceTable(table), [table]);
 	const availableModels = models?.models ?? [];
@@ -120,17 +157,17 @@ export function QuotaPanel({ api, initial }: QuotaPanelProps): ReactNode {
 			{quota ? (
 				<>
 					<section className="q-section" aria-label="account quota summary">
-						<div className="q-section-title">Accounts</div>
+						<div className="q-section-title">Accounts {current ? null : <span className="q-updated">last updated {new Date(receivedAt).toLocaleTimeString()}</span>}</div>
 						<div className="q-account-summaries">
-							{quota.accounts.map(account => <AccountSummary key={`${account.provider}:${account.account}`} account={account} />)}
+							{quota.accounts.map(account => <AccountSummary key={`${account.provider}:${account.account}`} account={current ? account : { ...account, stale: true }} now={now} />)}
 						</div>
 						<p className="q-advice" role="status">{quotaAdvice(quota.accounts)}</p>
 					</section>
 					<details className="q-details">
 						<summary>Details <span>full windows, flow control, equivalence and cache warming</span></summary>
 						<section className="q-section" aria-label="usage accounts">
-							<div className="q-section-title">Accounts and windows <span className="q-updated">updated {formatResetCountdown(quota.updatedAt, Date.now()) === "reset now" ? "just now" : new Date(quota.updatedAt).toLocaleTimeString()}</span></div>
-							<div className="q-accounts">{quota.accounts.map(account => <AccountView key={`${account.provider}:${account.account}`} account={account} />)}</div>
+							<div className="q-section-title">Accounts and windows <span className="q-updated">updated {now - quota.updatedAt < 1_000 ? "just now" : new Date(quota.updatedAt).toLocaleTimeString()}</span></div>
+							<div className="q-accounts">{quota.accounts.map(account => <AccountView key={`${account.provider}:${account.account}`} account={current ? account : { ...account, stale: true }} now={now} />)}</div>
 						</section>
 						<section className="q-section" aria-label="provider flow control">
 							<div className="q-section-title">Flow control</div>
@@ -172,7 +209,7 @@ export function QuotaPanel({ api, initial }: QuotaPanelProps): ReactNode {
 	);
 }
 
-function AccountSummary({ account }: { account: UsageAccountView }): ReactNode {
+function AccountSummary({ account, now }: { account: UsageAccountView; now: number }): ReactNode {
 	const window = primaryUsageWindow(account);
 	if (!window) {
 		return (
@@ -186,7 +223,7 @@ function AccountSummary({ account }: { account: UsageAccountView }): ReactNode {
 	const threshold = reserveThreshold(window);
 	const remaining = threshold - window.usedPct;
 	const tone = quotaTone(remaining);
-	const reset = formatResetCountdown(window.resetsAt);
+	const reset = formatResetCountdown(window.resetsAt, now);
 	return (
 		<div className={`q-account-summary q-tone-${tone}`} data-stale={account.stale ? "true" : "false"}>
 			<div className="q-account-summary-name"><strong>{account.provider}</strong><span>{account.account}</span>{account.stale ? <span className="q-stale">stale</span> : null}</div>
@@ -202,21 +239,21 @@ function AccountSummary({ account }: { account: UsageAccountView }): ReactNode {
 }
 
 
-function AccountView({ account }: { account: UsageAccountView }): ReactNode {
+function AccountView({ account, now }: { account: UsageAccountView; now: number }): ReactNode {
 	return (
 		<div className="q-account">
 			<div className="q-account-head"><strong>{account.provider}</strong><span>{account.account}</span>{account.stale ? <span className="q-stale">stale · cap held</span> : null}</div>
-			{account.windows.map(window => <WindowView key={window.id} window={window} />)}
+			{account.windows.map(window => <WindowView key={window.id} window={window} now={now} />)}
 		</div>
 	);
 }
 
-function WindowView({ window }: { window: UsageWindowView }): ReactNode {
+function WindowView({ window, now }: { window: UsageWindowView; now: number }): ReactNode {
 	const used = clampPercent(window.usedPct);
 	const reserve = reserveMarkerPct(window.reservePct);
 	return (
 		<div className="q-window">
-			<div className="q-window-head"><span>{window.id}</span><span>{fmtPercent(window.usedPct)} used</span><span>resets {formatResetCountdown(window.resetsAt)}</span></div>
+			<div className="q-window-head"><span>{window.id}</span><span>{fmtPercent(window.usedPct)} used</span><span>resets {formatResetCountdown(window.resetsAt, now)}</span></div>
 			<div className="q-meter" aria-label={`${window.id}: ${fmtPercent(window.usedPct)} used`}>
 				<span className="q-meter-fill" style={{ width: `${used}%` }} />
 				<span className="q-meter-marker q-meter-reserve" style={{ left: `${reserve}%` }} title={`${window.reservePct}% headroom reserve`} />

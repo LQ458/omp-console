@@ -37,4 +37,9 @@ sips -s format png -z 512 512 "$SOURCE" --out "$ICONSET/icon_256x256@2x.png" >/d
 sips -s format png -z 512 512 "$SOURCE" --out "$ICONSET/icon_512x512.png" >/dev/null
 sips -s format png -z 1024 1024 "$SOURCE" --out "$ICONSET/icon_512x512@2x.png" >/dev/null
 iconutil -c icns "$ICONSET" -o "$MAC_DIR/icons/icon.icns"
-printf 'Generated %s from packages/web/public/icon-512.png\n' "$MAC_DIR/icons/icon.icns"
+# The Windows installers need a multi-size .ico; Tauri's icon command writes it from the same source.
+ICO_TMP=$(mktemp -d)
+"$BUN" x @tauri-apps/cli@2 icon "$SOURCE" -o "$ICO_TMP" >/dev/null 2>&1
+cp "$ICO_TMP/icon.ico" "$MAC_DIR/icons/icon.ico"
+rm -rf "$ICO_TMP"
+printf 'Generated %s and icon.ico from packages/web/public/icon-512.png\n' "$MAC_DIR/icons/icon.icns"

@@ -32,8 +32,20 @@ export function formatResetCountdown(resetsAt: number | undefined, now = Date.no
 	const days = Math.floor(hours / 24);
 	if (days > 0) return `${days}d ${hours % 24}h`;
 	if (hours > 0) return `${hours}h ${minutes % 60}m`;
-	if (minutes > 0) return `${minutes}m ${seconds % 60}s`;
+	// Views re-render every QUOTA_POLL_MS, so seconds would sit still and then jump; show them only in the last minute.
+	if (minutes > 0) return `${minutes}m`;
 	return `${seconds}s`;
+}
+
+/** How often quota views refetch `/quota` and re-render their countdowns. */
+export const QUOTA_POLL_MS = 30_000;
+/** A snapshot this old means refetches have been failing; its countdowns are no longer shown as live. */
+export const QUOTA_SNAPSHOT_MAX_AGE_MS = 2 * 60_000;
+
+/** Whether a quota snapshot received at `receivedAt` (this device's clock) is recent enough to present its reset
+ * countdowns as current. */
+export function quotaSnapshotCurrent(receivedAt: number, now = Date.now()): boolean {
+	return now - receivedAt <= QUOTA_SNAPSHOT_MAX_AGE_MS;
 }
 
 export function clampPercent(value: number): number {
