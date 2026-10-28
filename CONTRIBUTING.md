@@ -23,26 +23,28 @@ cd packages/session-host && bun test --max-concurrency=4 && bun run check:types
 
 CI runs these checks on one Linux runner (plus the personal-data scan and gitleaks). It does not run macOS: before a release, run them on a Mac too, and `cd apps/mac && cargo test` for the macOS shell. Android's JavaScript tests are `cd apps/android && npm test`; Gradle tests require the Android SDK and JDK 21.
 
-## Regenerate omp patches
+## Sync published omp packages
 
-The published package tree in `node_modules` is the clean base for the pinned omp release. The patch generator reverses the current patch (when one exists for that exact version), then compares the clean published `src/` and `dist/types/` with the fork's `src/` and emitted declaration files. It requires all six fork packages to have been built before invocation.
+omp-console consumes published `@oh-my-pi/*` packages and keeps only the console integration patches in `patches/`. No omp fork checkout or local package build is required.
 
 ```sh
 bun install --frozen-lockfile
-# In the omp fork checkout, build the packages and emit dist/types/*.d.ts.
-bun scripts/regen-patches.ts '<omp-fork-checkout>' 18.12.6
+bun scripts/sync-omp.ts 18.13.2 --from 18.12.6 --report .omp-sync-18.13.2.md
 ```
 
-The generator validates all package versions and computes every patch before writing any of them. Review the resulting patch files and verify a fresh `bun install --frozen-lockfile` applies them. It does not change `package.json` or `bun.lock`.
+For the registry's current `latest` release:
 
-## Upgrade the pinned omp release
+```sh
+bun scripts/sync-omp.ts latest --report .omp-sync-latest.md
+```
 
-1. Select the intended published omp version and matching fork revision. Update the omp entries in `workspaces.catalog` and `patchedDependencies` in the root `package.json` to that version and the corresponding new patch paths.
-2. Run `bun install` to update `bun.lock` and install the unpatched published package artifacts for the new version. Keep this lockfile change in the upgrade commit.
-3. Build the matching fork packages so `src/` and emitted `dist/types/` are present, then run the patch generator with the fork checkout and new version.
-4. Review all six generated patches, run the full package checks, regenerate third-party notices, and commit the lockfile, patch set, and documentation together.
+The script reads the package registry from `bun.lock` (override with `--registry <url>`), downloads and integrity-checks the old and target package tarballs, applies the current patch to the old published tree, then three-way merges that result onto the target. Generated `models.json` and `compat/rules.json` always come from the target tarball. Record reviewed decisions under `patches/resolutions/<version>/<package>/<path>` in one of two forms: a `# omp-sync-resolution v1` file (per-conflict `ours`/`theirs` choices, optionally followed by a `--- patch ---` diff) for conflicted files, or the complete final file content, which applies whether or not the file conflicts (use it for line-level drops in cleanly merged files). Unresolved conflicts exit non-zero and still write the Markdown and JSON report. A committed patch must equal the script's output from the previous release's patch plus the committed resolutions.
 
-The old patch is used as a reverse only when its key exactly matches the requested version. A new version therefore starts from the published package tree, not an older patched release.
+A full-content resolution needs a sibling `<path>.ours.sha256` holding the SHA-256 of the patched old file it was reviewed against (`absent` when that file did not exist); the sync stops if the source patch has changed since, so a reviewed file can never silently replace a newer edit. Resolutions apply only when moving to a new version, and the script warns about any resolution it did not use.
+
+On success, the script updates `workspaces.catalog`, `patchedDependencies`, the versioned patch files, and `bun.lock` via `bun install`. It removes patches that become empty. Re-running against its own output must be a no-op. Review the report and `patches/LEDGER.md`, verify changed declarations against source, and run the package checks before committing the version, lockfile, patches, resolutions, and ledger together.
+
+The sync report writes both formats beside the requested path (for example, `.omp-sync-18.13.2.md` and `.omp-sync-18.13.2.json`). Never copy a fork diff forward by hand; preserve only console integration that the ledger ties to a live console path and test.
 
 ## Third-party notices
 

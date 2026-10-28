@@ -63,6 +63,32 @@ describe("worker over a relay", () => {
 		await waitUntil("pong", () => worker.lines.find(line => line.t === "pong" && line.id === "p1"));
 	}, 90_000);
 
+	test("keeps guest traffic bounded for a 40 KiB streamed answer", async () => {
+		fixture = new Fixture();
+		const room = newRoom();
+		const answerBytes = 40 * 1024;
+		const answer = Array.from(
+			{ length: Math.ceil(answerBytes / 23) },
+			(_, index) => `guest packet ${index.toString(16).padStart(4, "0")} data\n`,
+		)
+			.join("")
+			.slice(0, answerBytes);
+		const encodedAnswer = JSON.stringify(answer).slice(1, -1);
+		const worker = fixture.spawn(room, [], { STUB_STREAM_BYTES: String(answerBytes) });
+		await worker.ready();
+		const guest = await liveGuest(fixture, room);
+		const bytesBefore = fixture.relay.bytesSentToGuests(room.id);
+
+		guest.sendPrompt("STREAM_BYTES:");
+		await waitUntil("complete 40 KiB answer at guest", () => snapshotText(guest.getSnapshot()).includes(encodedAnswer), 15_000);
+		await waitUntil("worker idle after long answer", () => stateLines(worker).at(-1)?.state === "idle", 60_000);
+
+		const sentBytes = fixture.relay.bytesSentToGuests(room.id) - bytesBefore;
+		expect(sentBytes).toBeGreaterThanOrEqual(answerBytes);
+		expect(sentBytes).toBeLessThan(1_000_000);
+		console.log(`collab stream: ${answerBytes} answer bytes, ${sentBytes} guest bytes`);
+	}, 90_000);
+
 	test("gates agenda tools and the computer-use eval prelude by default, then exposes them when enabled", async () => {
 		fixture = new Fixture();
 		const defaultRoom = newRoom();

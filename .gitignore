@@ -1,5 +1,9 @@
 node_modules
 dist/
+# omp sync hand resolutions are reviewed source, including declaration files under dist/types.
+!patches/resolutions/**/dist/
+# Temporary work folders of scripts/sync-omp.ts (removed on exit).
+.omp-sync-*/
 *.tsbuildinfo
 *.log
 .DS_Store

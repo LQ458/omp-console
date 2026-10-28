@@ -143,6 +143,7 @@ function replyText(stream: AssistantMessageEventStream, text: string, stopReason
 	stream.push({ type: "done", reason: stopReason, message });
 }
 
+
 function replyToolCall(stream: AssistantMessageEventStream, toolCall: ToolCall): void {
 	const message = baseMessage([toolCall], "toolUse");
 	stream.push({ type: "start", partial: message });
@@ -154,6 +155,21 @@ function replyToolCall(stream: AssistantMessageEventStream, toolCall: ToolCall):
 async function respond(stream: AssistantMessageEventStream, context: Context, signal: AbortSignal | undefined) {
 	const system = (context.systemPrompt ?? []).join("\n");
 	const prompt = lastUserText(context);
+	if (prompt === "STREAM_BYTES:") {
+		const byteCount = Number(process.env.STUB_STREAM_BYTES);
+		if (!Number.isSafeInteger(byteCount) || byteCount < 0) {
+			replyText(stream, "invalid stream length");
+			return;
+		}
+		const text = Array.from(
+			{ length: Math.ceil(byteCount / 23) },
+			(_, index) => `guest packet ${index.toString(16).padStart(4, "0")} data\n`,
+		)
+			.join("")
+			.slice(0, byteCount);
+		replyText(stream, text);
+		return;
+	}
 	if (system.includes("You name coding-agent sessions")) {
 		replyText(stream, `<title>${process.env.STUB_TITLE ?? "Refined Stub Title"}</title>`);
 		return;

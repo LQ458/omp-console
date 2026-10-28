@@ -11,15 +11,15 @@
 			"packages/web"
 		],
 		"catalog": {
-			"@oh-my-pi/omptype": "18.12.6",
-			"@oh-my-pi/pi-agent-core": "18.12.6",
-			"@oh-my-pi/pi-ai": "18.12.6",
-			"@oh-my-pi/pi-catalog": "18.12.6",
-			"@oh-my-pi/pi-coding-agent": "18.12.6",
-			"@oh-my-pi/pi-natives": "18.12.6",
-			"@oh-my-pi/pi-tui": "18.12.6",
-			"@oh-my-pi/pi-utils": "18.12.6",
-			"@oh-my-pi/pi-wire": "18.12.6",
+			"@oh-my-pi/omptype": "18.13.2",
+			"@oh-my-pi/pi-agent-core": "18.13.2",
+			"@oh-my-pi/pi-ai": "18.13.2",
+			"@oh-my-pi/pi-catalog": "18.13.2",
+			"@oh-my-pi/pi-coding-agent": "18.13.2",
+			"@oh-my-pi/pi-natives": "18.13.2",
+			"@oh-my-pi/pi-tui": "18.13.2",
+			"@oh-my-pi/pi-utils": "18.13.2",
+			"@oh-my-pi/pi-wire": "18.13.2",
 			"@types/bun": "1.4.2",
 			"@types/react": "^19.2.17",
 			"@types/react-dom": "^19.2.3",
@@ -43,11 +43,7 @@
 		"bun": ">=1.4"
 	},
 	"patchedDependencies": {
-		"@oh-my-pi/pi-agent-core@18.12.6": "patches/@oh-my-pi%2Fpi-agent-core@18.12.6.patch",
-		"@oh-my-pi/pi-ai@18.12.6": "patches/@oh-my-pi%2Fpi-ai@18.12.6.patch",
-		"@oh-my-pi/pi-catalog@18.12.6": "patches/@oh-my-pi%2Fpi-catalog@18.12.6.patch",
-		"@oh-my-pi/pi-coding-agent@18.12.6": "patches/@oh-my-pi%2Fpi-coding-agent@18.12.6.patch",
-		"@oh-my-pi/pi-tui@18.12.6": "patches/@oh-my-pi%2Fpi-tui@18.12.6.patch",
-		"@oh-my-pi/pi-wire@18.12.6": "patches/@oh-my-pi%2Fpi-wire@18.12.6.patch"
+		"@oh-my-pi/pi-coding-agent@18.13.2": "patches/@oh-my-pi%2Fpi-coding-agent@18.13.2.patch",
+		"@oh-my-pi/pi-wire@18.13.2": "patches/@oh-my-pi%2Fpi-wire@18.13.2.patch"
 	}
 }

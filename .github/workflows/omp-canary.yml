@@ -1,0 +1,61 @@
+name: omp sync canary
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "43 9 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  sync-and-test:
+    name: Sync latest published omp and test
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.3
+
+      - name: Isolate omp state
+        run: |
+          echo "PI_CODING_AGENT_DIR=$(mktemp -d "$RUNNER_TEMP/pi-coding-agent.XXXXXX")" >> "$GITHUB_ENV"
+          echo "PI_CONFIG_DIR=$(mktemp -d "$RUNNER_TEMP/omp-console-test.XXXXXX")" >> "$GITHUB_ENV"
+
+      - name: Install pinned dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Sync latest published omp
+        run: bun scripts/sync-omp.ts latest --report .omp-canary-report.md
+
+      - name: Typecheck
+        run: |
+          bun x tsgo --noEmit --strict --target ES2022 --module ESNext --moduleResolution bundler packages/protocol/src/index.ts
+          bun run check:types
+
+      - name: Web tests, typecheck, and build
+        run: cd packages/web && bun test && bun run check:types && bun run build
+
+      - name: Daemon tests and typecheck
+        run: cd packages/daemon && bun test --max-concurrency=4 && bun run check:types
+
+      - name: Session-host tests and typecheck
+        run: cd packages/session-host && bun test --max-concurrency=4 && bun run check:types
+
+      - name: Upload sync report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: omp-sync-report
+          path: |
+            .omp-canary-report.md
+            .omp-canary-report.json
+          if-no-files-found: warn
+          retention-days: 30

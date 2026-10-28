@@ -39,12 +39,19 @@ interface Room {
 export interface LocalRelay {
 	/** ws://localhost:<port> — append `/r/<roomId>?role=…` to connect. */
 	url: string;
+	/** Total host-frame bytes forwarded to this room's guests. */
+	bytesSentToGuests(roomId: string): number;
 	/** Closes every room and stops the server. Idempotent. */
 	stop(): void;
 }
 
 export function startLocalRelay(port = 0): LocalRelay {
 	const rooms = new Map<string, Room>();
+	const bytesByRoom = new Map<string, number>();
+	const sendToGuest = (roomId: string, guest: RelaySocket, message: Buffer): void => {
+		bytesByRoom.set(roomId, (bytesByRoom.get(roomId) ?? 0) + message.byteLength);
+		guest.send(message);
+	};
 
 	const server = Bun.serve({
 		port,
@@ -88,9 +95,10 @@ export function startLocalRelay(port = 0): LocalRelay {
 					const envelope = unpackEnvelope(message);
 					if (!envelope) return;
 					if (envelope.peerId === 0) {
-						for (const guest of room.guests.values()) guest.send(message);
+						for (const guest of room.guests.values()) sendToGuest(ws.data.roomId, guest, message);
 					} else {
-						room.guests.get(envelope.peerId)?.send(message);
+						const guest = room.guests.get(envelope.peerId);
+						if (guest) sendToGuest(ws.data.roomId, guest, message);
 					}
 					return;
 				}
@@ -123,6 +131,9 @@ export function startLocalRelay(port = 0): LocalRelay {
 
 	return {
 		url: `ws://localhost:${server.port}`,
+		bytesSentToGuests(roomId: string): number {
+			return bytesByRoom.get(roomId) ?? 0;
+		},
 		stop(): void {
 			for (const room of rooms.values()) {
 				const closure = JSON.stringify({ t: "room-closed" });
@@ -133,6 +144,7 @@ export function startLocalRelay(port = 0): LocalRelay {
 				room.host.close(1001, "relay shutting down");
 			}
 			rooms.clear();
+			bytesByRoom.clear();
 			server.stop(true);
 		},
 	};
