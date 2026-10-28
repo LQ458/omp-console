@@ -1,0 +1,832 @@
+/* Windowed transcript: shell hosts the jump button; the list holds only rows near the viewport. */
+
+.tr-shell {
+	position: relative;
+	height: 100%;
+	min-height: 0;
+}
+
+.tr-list,
+.tr-tail {
+	display: flow-root;
+}
+
+/* Rows mount and unmount while scrolling; only live tail rows animate in. */
+.tr-list .tr-row {
+	animation: none;
+}
+
+.tr-jump {
+	position: absolute;
+	left: 50%;
+	bottom: 12px;
+	transform: translateX(-50%);
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 6px 12px 6px 10px;
+	font: 500 12px/1 var(--font-ui);
+	color: var(--fg);
+	background: var(--bg-raised);
+	border: 1px solid var(--border);
+	border-radius: 999px;
+	box-shadow: var(--shadow-card);
+	cursor: pointer;
+}
+
+.tr-jump:hover {
+	border-color: var(--fg-faint);
+}
+
+/* Transcript — calm gutter-labeled rows; user turns sit on a raised card. tr-* namespace. */
+
+.tr-root {
+	height: 100%;
+	position: relative;
+	/* The list corrects scroll itself; native anchoring would apply the same shift twice. */
+	overflow-anchor: none;
+	overflow-y: auto;
+	overflow-x: hidden;
+	padding: 24px 24px 16px;
+	font-family: var(--font-ui);
+	font-size: 14px;
+	line-height: 1.6;
+	color: var(--fg);
+}
+
+.tr-empty {
+	padding: 48px 0;
+	text-align: center;
+	color: var(--fg-faint);
+	font-size: 13px;
+}
+.tr-cache-status {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	margin: 0 0 10px;
+	padding: 5px 9px;
+	border: 1px solid var(--border);
+	border-radius: 6px;
+	background: var(--bg-raised);
+	color: var(--fg-faint);
+	font-size: 11px;
+}
+
+/* ---- rows ---- */
+
+.tr-row {
+	display: grid;
+	grid-template-columns: 64px minmax(0, 1fr);
+	gap: 0 16px;
+	padding: 7px 0;
+	animation: rise 320ms var(--ease-out) backwards;
+}
+
+.tr-gutter {
+	padding-top: 3px;
+	text-align: right;
+	font-family: var(--font-mono);
+	font-size: 11.5px;
+	font-weight: 500;
+	color: var(--fg-faint);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	user-select: none;
+}
+
+.tr-row--user .tr-gutter {
+	padding-top: 12px;
+	color: var(--fg-muted);
+}
+
+/* User turns: a tinted bubble on the right, so prompts never read as agent prose (which stays unboxed on the left). */
+.tr-row--user .tr-body {
+	justify-self: end;
+	max-width: min(88%, 760px);
+	padding: 9px 14px;
+	background: color-mix(in srgb, var(--accent) 9%, var(--bg-raised));
+	border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--border));
+	border-radius: var(--radius-lg) var(--radius-lg) 4px var(--radius-lg);
+}
+
+.tr-body {
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 4px;
+}
+
+.tr-row--assistant .tr-body {
+	gap: 8px;
+}
+
+.tr-body > .tr-md {
+	align-self: stretch;
+}
+
+
+.tr-row--custom .tr-body {
+	color: var(--fg-muted);
+}
+
+.tr-custom {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 4px;
+}
+
+.tr-msg-img {
+	max-height: 240px;
+	max-width: 100%;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-sm);
+}
+
+/* ---- chips & badges ---- */
+
+.tr-badge {
+	display: inline-block;
+	padding: 0 7px;
+	border-radius: 999px;
+	background: var(--accent-muted);
+	color: var(--accent);
+	font-family: var(--font-mono);
+	font-size: 11px;
+	line-height: 18px;
+	text-transform: none;
+	letter-spacing: 0;
+}
+
+.tr-chip {
+	display: inline-flex;
+	align-items: center;
+	height: 20px;
+	padding: 0 8px;
+	border: 1px solid var(--border);
+	border-radius: 999px;
+	background: var(--bg-raised);
+	color: var(--fg-muted);
+	font-family: var(--font-mono);
+	font-size: 11px;
+	white-space: nowrap;
+}
+
+.tr-chip--err {
+	border-color: color-mix(in oklch, var(--err) 50%, var(--border));
+	color: var(--err);
+	background: color-mix(in oklch, var(--err) 10%, transparent);
+}
+
+.tr-chip--warn {
+	border-color: color-mix(in oklch, var(--warn) 50%, var(--border));
+	color: var(--warn);
+	background: color-mix(in oklch, var(--warn) 10%, transparent);
+}
+
+.tr-stop {
+	display: flex;
+	align-items: baseline;
+	gap: 8px;
+	margin-top: 2px;
+}
+
+.tr-stop-msg {
+	color: var(--err);
+	font-family: var(--font-mono);
+	font-size: 11.5px;
+	white-space: pre-wrap;
+	word-break: break-word;
+}
+
+/* ---- thinking ---- */
+
+.tr-think-head {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	padding: 0;
+	border: none;
+	background: none;
+	cursor: pointer;
+	color: var(--fg-faint);
+	font-family: var(--font-ui);
+	font-size: 12px;
+	font-style: italic;
+}
+
+.tr-think-head:hover {
+	color: var(--fg-muted);
+}
+
+.tr-think-body {
+	align-self: stretch;
+	margin: 2px 0;
+	padding: 2px 0 2px 10px;
+	border-left: 2px solid var(--border);
+	color: var(--fg-muted);
+	font-style: italic;
+	font-size: 12px;
+	white-space: pre-wrap;
+	word-break: break-word;
+}
+
+.tr-chev {
+	flex: none;
+	color: var(--fg-faint);
+	transition: transform 150ms ease-out;
+}
+
+.tr-chev--open {
+	transform: rotate(90deg);
+}
+
+/* ---- dividers & markers ---- */
+
+.tr-divider {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	margin: 16px 0;
+	color: var(--fg-faint);
+	font-size: 12px;
+	user-select: none;
+}
+
+.tr-divider::before,
+.tr-divider::after {
+	content: "";
+	flex: 1;
+	height: 1px;
+	background: var(--border);
+}
+
+.tr-marker {
+	color: var(--fg-faint);
+	font-family: var(--font-mono);
+	font-size: 11px;
+}
+
+.tr-shimmer {
+	color: var(--fg-muted);
+	font-size: 12.5px;
+	animation: tr-pulse 1.4s ease-in-out infinite;
+}
+
+/* ---- tool cards ----
+ * Cards themselves are rendered by src/tool-render (tv-* namespace);
+ * only host-level layout lives here. */
+
+.tr-body > .tv-card {
+	align-self: stretch;
+	background: var(--bg-raised);
+	border-radius: var(--radius);
+}
+
+/* ---- markdown ---- */
+
+/* Match the TUI's word-boundary wrapping: keep Korean/CJK words intact when
+ * possible, but still emergency-break long URLs or identifiers before they
+ * overflow the transcript. */
+.tr-md {
+	line-height: 1.55;
+	overflow-wrap: break-word;
+	word-break: keep-all;
+}
+
+.tr-md > :first-child {
+	margin-top: 0;
+}
+
+.tr-md > :last-child {
+	margin-bottom: 0;
+}
+
+.tr-md p {
+	margin: 6px 0;
+}
+
+.tr-md p,
+.tr-md li {
+	white-space: pre-wrap;
+}
+
+.tr-md h1,
+.tr-md h2,
+.tr-md h3,
+.tr-md h4,
+.tr-md h5,
+.tr-md h6 {
+	margin: 14px 0 6px;
+	font-weight: 600;
+	line-height: 1.3;
+}
+
+.tr-md h1 {
+	font-size: 17px;
+}
+
+.tr-md h2 {
+	font-size: 15px;
+}
+
+.tr-md h3 {
+	font-size: 14px;
+}
+
+.tr-md h4,
+.tr-md h5,
+.tr-md h6 {
+	font-size: 13px;
+}
+
+.tr-md ul,
+.tr-md ol {
+	margin: 6px 0;
+	padding-left: 22px;
+}
+
+.tr-md li {
+	margin: 2px 0;
+}
+
+.tr-md li > ul,
+.tr-md li > ol {
+	white-space: normal;
+}
+
+.tr-md li > p {
+	margin: 2px 0;
+}
+
+.tr-md code {
+	padding: 1px 5px;
+	border: 1px solid var(--border);
+	border-radius: 5px;
+	background: var(--bg-raised);
+	font-family: var(--font-mono);
+	font-size: 0.86em;
+}
+
+.tr-md pre {
+	margin: 10px 0;
+	padding: 12px 14px;
+	overflow-x: auto;
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	background: var(--bg-inset);
+}
+
+/* Phones: long lines wrap instead of hiding behind a sideways scroll; the copy button still copies the exact text. */
+@media (pointer: coarse), (max-width: 759.98px) {
+	.tr-md pre,
+	.tr-md pre code {
+		white-space: pre-wrap;
+		overflow-wrap: anywhere;
+	}
+}
+
+/* ---- figures (transcript/figures.ts): svg, mermaid, table charts, widgets ---- */
+.tr-md .tr-fig {
+	margin: 8px 0;
+}
+.tr-md .tr-fig--svg,
+.tr-md .tr-fig--mermaid,
+.tr-md .tr-fig--widget {
+	box-sizing: border-box;
+	display: flex;
+	width: 100%;
+	flex-direction: column;
+	align-items: stretch;
+	padding: 12px;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-lg);
+	animation: tr-figure-enter var(--dur-base, 200ms) var(--ease-out, ease-out) backwards;
+}
+
+@keyframes tr-figure-enter {
+	from { opacity: 0; transform: translateY(4px); }
+	to { opacity: 1; transform: translateY(0); }
+}
+/* A streaming block replaces its HTML on every token, which would restart the entrance forever. */
+.tr-md--streaming .tr-fig {
+	animation: none;
+}
+
+.tr-md .tr-fig--svg > .tr-fig-img,
+.tr-md .tr-fig--mermaid > .tr-fig-img {
+	margin-inline: auto;
+}
+
+.tr-md .tr-fig-caption {
+	align-self: stretch;
+	margin-top: 8px;
+	color: var(--fg-muted);
+	font-size: 0.86em;
+	line-height: 1.45;
+}
+
+/* Once drawn, the fence's code is reachable only through the "Source" disclosure. */
+.tr-md .tr-fig--drawn > pre {
+	display: none;
+}
+
+/* Figures draw at their own size (capped by the column); the 320px cap is for pasted screenshots. */
+.tr-md .tr-fig-img {
+	display: block;
+	max-width: 100%;
+	max-height: none;
+	height: auto;
+}
+
+/* A source the browser could not draw shows as the code block it came from. */
+.tr-md .tr-fig--failed > .tr-fig-img {
+	display: none;
+}
+
+.tr-md .tr-fig--failed > pre {
+	display: block;
+}
+
+.tr-md .tr-fig--chart {
+	height: 0;
+	overflow: hidden;
+	margin-top: 0;
+}
+
+.tr-md .tr-fig--chart[data-chartable="true"] {
+	height: auto;
+	overflow: visible;
+	margin-top: 4px;
+}
+
+.tr-md .tr-fig-frame {
+	display: block;
+	width: 100%;
+	border: 0;
+	border-radius: 0;
+	background: transparent;
+	color-scheme: inherit;
+}
+
+.tr-md .tr-fig-note {
+	margin-bottom: 6px;
+	color: var(--fg-muted);
+	font-size: 0.86em;
+}
+.tr-md .tr-fig-widget-head {
+	display: flex;
+	min-height: 44px;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	margin-bottom: 8px;
+}
+
+.tr-md .tr-fig-widget-head > strong {
+	min-width: 0;
+	font-size: 1rem;
+	font-weight: 600;
+}
+
+.tr-md .tr-fig-widget-reset {
+	min-height: 44px;
+	padding: 6px 12px;
+	border: 1px solid var(--border);
+	border-radius: 999px;
+	background: transparent;
+	color: var(--fg-muted);
+	font: inherit;
+	cursor: pointer;
+	transition: background-color var(--dur-fast, 120ms) var(--ease-out, ease-out), border-color var(--dur-fast, 120ms)
+		var(--ease-out, ease-out);
+}
+
+.tr-md .tr-fig-widget-reset:hover {
+	border-color: var(--accent);
+	color: var(--fg);
+}
+
+.tr-md .tr-fig-source > summary {
+	width: fit-content;
+	margin-top: 4px;
+	color: var(--fg-faint);
+	font-size: 0.8em;
+	cursor: pointer;
+	user-select: none;
+}
+
+.tr-md .tr-fig-source[open] > summary {
+	color: var(--fg-muted);
+}
+
+.tr-md pre code {
+	padding: 0;
+	border: 0;
+	border-radius: 0;
+	background: none;
+	font-size: 12px;
+	line-height: 1.5;
+}
+
+.tr-md blockquote {
+	margin: 8px 0;
+	padding: 2px 12px;
+	border-left: 2px solid var(--accent);
+	color: var(--fg-muted);
+}
+
+.tr-md table {
+	margin: 8px 0;
+	border-collapse: collapse;
+	font-size: 12.5px;
+}
+
+/* Table cells need `anywhere` so long URLs/identifiers contribute a shrinkable
+ * intrinsic width instead of expanding under the transcript's clipped overflow. */
+.tr-md th,
+.tr-md td {
+	padding: 3px 8px;
+	border: 1px solid var(--border);
+	overflow-wrap: anywhere;
+	text-align: left;
+	word-break: keep-all;
+}
+
+.tr-md th {
+	background: var(--bg-raised);
+	font-weight: 550;
+}
+
+.tr-md a {
+	color: var(--accent);
+	text-decoration: none;
+}
+
+.tr-md a:hover {
+	text-decoration: underline;
+}
+
+.tr-md hr {
+	margin: 12px 0;
+	border: none;
+	height: 1px;
+	background: var(--border);
+}
+
+.tr-md img {
+	max-width: 100%;
+	max-height: 320px;
+	border-radius: var(--radius-sm);
+}
+
+/* Math is native MathML (see transcript/math.ts): it must opt out of the
+ * `pre-wrap` on `.tr-md p`/`li`. Display equations scroll inside `.tr-math`
+ * rather than inside the `math` element, whose ink overflows its own box; the
+ * vertical padding absorbs that ink so the box never scrolls vertically.
+ *
+ * Stretchy brackets, big operators and radicals need a font with an OpenType
+ * MATH table. macOS and iOS ship STIX Two Math; Android and Chromium's default
+ * `math` family have none, so braces and matrix parentheses stayed one line
+ * tall there. The subset copy in public/fonts (SIL OFL 1.1) is fetched only
+ * when the system font is missing and a message actually contains math. */
+@font-face {
+	font-family: "Deck Math";
+	src:
+		local("STIX Two Math"),
+		local("STIXTwoMath-Regular"),
+		url("../../assets/stix-two-math.woff2") format("woff2");
+	font-display: swap;
+}
+
+.tr-md math {
+	white-space: normal;
+	font-family: "Deck Math", math;
+}
+
+.tr-md .tr-math {
+	display: block;
+	margin: 4px 0;
+	padding-block: 0.5em;
+	overflow-x: auto;
+}
+
+/* ---- compact variant (agent drawer) ---- */
+
+.tr-root--compact {
+	padding: 12px 14px 16px;
+	font-size: 13px;
+}
+
+.tr-root--compact .tr-row {
+	grid-template-columns: 52px 1fr;
+	gap: 0 8px;
+	padding: 3px 0;
+}
+
+.tr-root--compact .tr-gutter {
+	font-size: 10.5px;
+}
+
+.tr-root--compact .tv-pre {
+	max-height: 200px;
+	overflow-y: auto;
+}
+
+/* Narrow panes (several columns side by side): the speaker label sits above the text instead of taking a 64 px column. */
+@container pane (max-width: 420px) {
+	.tr-root {
+		padding: 12px 10px 12px;
+		font-size: 13px;
+	}
+
+	.tr-row {
+		grid-template-columns: minmax(0, 1fr);
+		gap: 2px;
+	}
+
+	.tr-gutter {
+		text-align: left;
+		padding-top: 0;
+	}
+
+	.tr-row--user .tr-gutter {
+		text-align: right;
+		padding-top: 0;
+	}
+
+	.tr-row--user .tr-body {
+		max-width: 94%;
+	}
+
+	.tr-gutter:empty {
+		display: none;
+	}
+}
+
+/* ---- animation ---- */
+
+@keyframes tr-pulse {
+	0%,
+	100% {
+		opacity: 0.45;
+	}
+	50% {
+		opacity: 1;
+	}
+}
+
+/* ---- responsive mobile styles ---- */
+@media (max-width: 640px) {
+	.tr-row {
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+		padding: 8px 0;
+	}
+	.tr-root {
+		padding: 16px 14px 12px;
+	}
+	.tr-gutter,
+	.tr-row--user .tr-gutter {
+		text-align: left;
+		padding-top: 0;
+		font-size: 11px;
+		margin-bottom: 2px;
+	}
+	.tr-row--user .tr-gutter {
+		text-align: right;
+	}
+	.tr-row--user .tr-body {
+		align-self: flex-end;
+		max-width: 92%;
+	}
+	.tr-gutter:empty {
+		display: none;
+	}
+}
+.tr-copy {
+	align-self: flex-end;
+	padding: 2px 7px;
+	border: 1px solid transparent;
+	border-radius: var(--radius-sm);
+	background: transparent;
+	color: var(--fg-faint);
+	font: 11px/1.5 var(--font-ui);
+	cursor: pointer;
+}
+
+.tr-copy:hover {
+	border-color: var(--border);
+	background: var(--bg-raised);
+	color: var(--fg);
+}
+
+/* In flow at the end of the transcript, so it never covers a message's Copy action. */
+.tr-open-link {
+	display: block;
+	margin: 4px 16px 8px auto;
+	padding: 5px 9px;
+	border: 1px solid var(--border);
+	border-radius: 999px;
+	background: var(--bg-raised);
+	color: var(--fg-muted);
+	font: 11px/1.2 var(--font-ui);
+	box-shadow: var(--shadow-card);
+	cursor: pointer;
+}
+
+.tr-open-link:hover {
+	border-color: var(--ring);
+	color: var(--fg);
+}
+
+.tr-shell-output {
+	margin: 8px 0 8px 80px;
+	padding: 9px 11px;
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	background: var(--bg-inset);
+}
+
+.tr-shell-output-head {
+	display: flex;
+	justify-content: space-between;
+	gap: 12px;
+	color: var(--fg-muted);
+	font: 11px/1.5 var(--font-mono);
+}
+
+.tr-shell-output-head code {
+	min-width: 0;
+	overflow-wrap: anywhere;
+}
+
+.tr-shell-output-head span {
+	flex: none;
+	color: var(--err);
+}
+
+.tr-shell-output pre {
+	max-height: 280px;
+	margin: 6px 0 0;
+	overflow: auto;
+	color: var(--fg);
+	font: 12px/1.5 var(--font-mono);
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+}
+
+@media (max-width: 640px) {
+
+	.tr-shell-output {
+		margin-left: 0;
+	}
+}
+.tr-md pre.tr-has-copy {
+	position: relative;
+	padding-top: 34px;
+}
+
+.tr-code-copy {
+	position: absolute;
+	top: 6px;
+	right: 8px;
+	padding: 3px 7px;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-sm);
+	background: var(--bg-raised);
+	color: var(--fg-muted);
+	font: 11px/1.4 var(--font-ui);
+	cursor: pointer;
+}
+
+.tr-code-copy:hover {
+	border-color: var(--ring);
+	color: var(--fg);
+}
+
+@media (pointer: coarse) {
+	.tr-jump,
+	.tr-think-head,
+	.tr-copy,
+	.tr-open-link,
+	.tr-code-copy {
+		min-width: 36px;
+		min-height: 36px;
+	}
+
+	.tr-copy {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.tr-md pre.tr-has-copy {
+		padding-top: 44px;
+	}
+}

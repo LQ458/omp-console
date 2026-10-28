@@ -1,0 +1,53 @@
+{
+	"name": "omp-console",
+	"private": true,
+	"license": "MIT",
+	"type": "module",
+	"workspaces": {
+		"packages": [
+			"packages/protocol",
+			"packages/daemon",
+			"packages/session-host",
+			"packages/web"
+		],
+		"catalog": {
+			"@oh-my-pi/omptype": "18.12.6",
+			"@oh-my-pi/pi-agent-core": "18.12.6",
+			"@oh-my-pi/pi-ai": "18.12.6",
+			"@oh-my-pi/pi-catalog": "18.12.6",
+			"@oh-my-pi/pi-coding-agent": "18.12.6",
+			"@oh-my-pi/pi-natives": "18.12.6",
+			"@oh-my-pi/pi-tui": "18.12.6",
+			"@oh-my-pi/pi-utils": "18.12.6",
+			"@oh-my-pi/pi-wire": "18.12.6",
+			"@types/bun": "1.4.2",
+			"@types/react": "^19.2.17",
+			"@types/react-dom": "^19.2.3",
+			"katex": "^0.18.4",
+			"lucide-react": "^1.24.0",
+			"react": "19.2.7",
+			"react-dom": "19.2.7"
+		}
+	},
+	"scripts": {
+		"check": "bun run check:types && bun run test",
+		"check:types": "bun --filter '*' check:types",
+		"test": "bun --filter '*' test"
+	},
+	"devDependencies": {
+		"@types/bun": "catalog:",
+		"@typescript/native-preview": "7.0.0-dev.20260707.2"
+	},
+	"packageManager": "bun@1.4.3",
+	"engines": {
+		"bun": ">=1.4"
+	},
+	"patchedDependencies": {
+		"@oh-my-pi/pi-agent-core@18.12.6": "patches/@oh-my-pi%2Fpi-agent-core@18.12.6.patch",
+		"@oh-my-pi/pi-ai@18.12.6": "patches/@oh-my-pi%2Fpi-ai@18.12.6.patch",
+		"@oh-my-pi/pi-catalog@18.12.6": "patches/@oh-my-pi%2Fpi-catalog@18.12.6.patch",
+		"@oh-my-pi/pi-coding-agent@18.12.6": "patches/@oh-my-pi%2Fpi-coding-agent@18.12.6.patch",
+		"@oh-my-pi/pi-tui@18.12.6": "patches/@oh-my-pi%2Fpi-tui@18.12.6.patch",
+		"@oh-my-pi/pi-wire@18.12.6": "patches/@oh-my-pi%2Fpi-wire@18.12.6.patch"
+	}
+}

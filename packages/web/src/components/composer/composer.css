@@ -1,0 +1,669 @@
+/* Composer additions: suggestion list, notes, image chips, drop highlight. `cmp-*` prefix; design-token vars only. */
+
+.cmp-composer {
+	position: relative;
+}
+
+.cmp-touch-actions {
+	display: flex;
+	gap: 6px;
+	max-width: 100%;
+	margin-bottom: 8px;
+	padding: 2px 0 6px;
+	overflow-x: auto;
+	overscroll-behavior-x: contain;
+	scrollbar-width: thin;
+}
+
+.cmp-touch-action {
+	flex: 0 0 auto;
+	min-width: 44px;
+	min-height: 44px;
+	padding: 0 12px;
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	background: var(--bg-raised);
+	color: var(--fg);
+	font: inherit;
+	font-size: 13px;
+	white-space: nowrap;
+}
+
+.cmp-phone-actions {
+	display: grid;
+	gap: 6px;
+	width: 100%;
+	margin-bottom: 8px;
+}
+
+.cmp-phone-action-bar {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+	gap: 6px;
+}
+
+.cmp-touch-shortcut,
+.cmp-action-toggle {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 6px;
+	min-width: 0;
+	min-height: 44px;
+	padding: 0 10px;
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	background: var(--bg-raised);
+	color: var(--fg);
+	font: inherit;
+	font-size: 12px;
+	font-weight: 550;
+	white-space: nowrap;
+}
+
+.cmp-action-toggle {
+	padding-inline: 12px;
+}
+
+.cmp-touch-shortcut svg,
+.cmp-action-toggle svg,
+.cmp-action-tile svg {
+	flex: none;
+}
+
+.cmp-touch-shortcut:active:not(:disabled),
+.cmp-action-toggle:active:not(:disabled),
+.cmp-action-tile:active:not(:disabled) {
+	transform: scale(0.97);
+}
+
+.cmp-touch-action-panel {
+	max-height: 70vh;
+	max-height: 70dvh;
+	overflow-y: auto;
+	overscroll-behavior: contain;
+	-webkit-overflow-scrolling: touch;
+	padding: 9px 8px;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-xl);
+	background: var(--panel);
+	box-shadow: var(--shadow-card);
+	animation: cmp-action-panel-in var(--dur-base, 200ms) var(--ease-out, ease-out) both;
+}
+
+.cmp-touch-action-panel[data-exiting="true"] {
+	animation: cmp-action-panel-out var(--dur-base, 200ms) var(--ease-in-out, ease-in-out) forwards;
+	pointer-events: none;
+}
+
+.cmp-touch-action-panel[data-motion="off"] {
+	animation: none;
+}
+
+.cmp-action-section + .cmp-action-section {
+	margin-top: 12px;
+}
+
+.cmp-action-section h3 {
+	margin: 0 0 6px;
+	padding-inline: 2px;
+	color: var(--fg-muted);
+	font-size: 11px;
+	font-weight: 650;
+	letter-spacing: 0.03em;
+}
+
+.cmp-action-suggestions-title {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+}
+
+.cmp-action-status {
+	margin: 0;
+	min-height: 44px;
+	padding: 6px 2px;
+	color: var(--fg-muted);
+	font-size: 11px;
+	line-height: 1.3;
+}
+
+.cmp-action-grid {
+	display: grid;
+	grid-template-columns: repeat(4, minmax(0, 1fr));
+	gap: 6px;
+}
+
+.cmp-action-tile {
+	display: flex;
+	min-width: 0;
+	min-height: 64px;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 5px;
+	padding: 6px 4px;
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	background: var(--bg-raised);
+	color: var(--fg);
+	font: inherit;
+	font-size: 11px;
+	line-height: 1.2;
+	text-align: center;
+	overflow-wrap: anywhere;
+}
+
+.cmp-action-tile[aria-pressed="true"] {
+	border-color: var(--ring);
+	background: var(--bg-overlay);
+}
+
+.cmp-action-tile:disabled {
+	opacity: 0.48;
+}
+
+
+@keyframes cmp-action-panel-in {
+	from {
+		opacity: 0;
+		transform: translateY(8px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+@keyframes cmp-action-panel-out {
+	from {
+		opacity: 1;
+		transform: translateY(0);
+	}
+	to {
+		opacity: 0;
+		transform: translateY(8px);
+	}
+}
+
+@media (max-width: 360px) {
+	.cmp-action-grid {
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.cmp-touch-action-panel,
+	.cmp-touch-shortcut,
+	.cmp-action-toggle,
+	.cmp-action-tile {
+		animation: none;
+		transition: none;
+	}
+}
+
+.cmp-field {
+	display: flex;
+	flex: 1;
+	min-width: 0;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.cmp-field .sh-composer-input {
+	flex: none;
+	width: 100%;
+}
+
+.cmp-inner[data-drop="true"] {
+	box-shadow:
+		0 0 0 2px var(--ring),
+		var(--shadow-card);
+}
+
+/* ---- suggestion list, docked above the composer card ---- */
+.cmp-suggest {
+	position: absolute;
+	left: 16px;
+	right: 16px;
+	bottom: calc(100% - 8px);
+	z-index: 20;
+	display: flex;
+	flex-direction: column;
+	max-height: min(320px, 46dvh);
+	overflow: hidden;
+	border: 1px solid var(--border-strong);
+	border-radius: var(--radius-lg);
+	background: var(--bg-overlay);
+	box-shadow: var(--shadow-overlay);
+}
+
+.cmp-suggest-head {
+	display: flex;
+	justify-content: space-between;
+	gap: 12px;
+	padding: 7px 12px;
+	font-size: 11px;
+	font-weight: 600;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+	color: var(--fg-faint);
+	border-bottom: 1px solid var(--border);
+}
+
+.cmp-suggest-keys {
+	font-weight: 400;
+	letter-spacing: 0;
+	text-transform: none;
+}
+
+.cmp-suggest-list {
+	margin: 0;
+	padding: 4px;
+	list-style: none;
+	overflow-y: auto;
+}
+
+.cmp-suggest-row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	min-height: 32px;
+	padding: 4px 8px;
+	border-radius: var(--radius);
+	font-size: 13px;
+	cursor: pointer;
+}
+
+.cmp-suggest-row[data-active="true"] {
+	background: var(--selected);
+}
+
+.cmp-suggest-row[data-disabled="true"] {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+.cmp-suggest-icon {
+	display: inline-flex;
+	flex: none;
+	color: var(--fg-faint);
+}
+
+.cmp-suggest-primary {
+	flex: none;
+	max-width: 60%;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	font-family: var(--font-mono);
+	font-size: 12.5px;
+	color: var(--fg);
+}
+
+.cmp-suggest-secondary {
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	color: var(--fg-muted);
+}
+
+.cmp-suggest-row .ct-badge {
+	margin-left: auto;
+	flex: none;
+}
+
+.cmp-suggest-error {
+	margin: 0;
+	padding: 10px 12px;
+	font-size: 13px;
+	color: var(--err);
+}
+
+/* ---- inline result note ---- */
+.cmp-note {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 6px 10px;
+	margin: 0 16px 8px;
+	padding: 6px 8px 6px 12px;
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	background: var(--bg-raised);
+	font-size: 12.5px;
+	color: var(--fg-muted);
+}
+
+.cmp-note[data-tone="error"] {
+	border-color: color-mix(in srgb, var(--err) 45%, transparent);
+	color: var(--fg);
+}
+
+.cmp-note-text {
+	flex: 1 1 auto;
+	min-width: 0;
+}
+
+.cmp-note-close {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 22px;
+	height: 22px;
+	padding: 0;
+	border: 0;
+	border-radius: var(--radius-sm);
+	background: transparent;
+	color: var(--fg-faint);
+	cursor: pointer;
+}
+
+.cmp-note-close:hover {
+	background: var(--hover);
+	color: var(--fg);
+}
+
+/* ---- attached images ---- */
+.cmp-chips {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.cmp-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	max-width: 100%;
+	padding: 3px 4px 3px 3px;
+	border: 1px solid var(--border-strong);
+	border-radius: var(--radius);
+	background: var(--bg-inset);
+	font-size: 12px;
+}
+
+.cmp-chip-img {
+	width: 28px;
+	height: 28px;
+	border-radius: var(--radius-sm);
+	object-fit: cover;
+}
+
+.cmp-chip-name {
+	max-width: 140px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	color: var(--fg-muted);
+}
+
+.cmp-chip-remove {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 22px;
+	height: 22px;
+	padding: 0;
+	border: 0;
+	border-radius: var(--radius-sm);
+	background: transparent;
+	color: var(--fg-faint);
+	cursor: pointer;
+}
+
+.cmp-chip-remove:hover {
+	background: var(--hover);
+	color: var(--fg);
+}
+
+@media (max-width: 640px) {
+	.cmp-suggest {
+		left: 8px;
+		right: 8px;
+	}
+
+	.cmp-suggest-keys {
+		display: none;
+	}
+
+	.cmp-note {
+		margin: 0 8px 8px;
+	}
+}
+.cmp-mode-hint {
+	font-size: 11px;
+	color: var(--fg-faint);
+}
+
+.cmp-github-suggest {
+	position: absolute;
+	left: 16px;
+	right: 16px;
+	bottom: calc(100% - 8px);
+	z-index: 21;
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 6px;
+	padding: 8px;
+	border: 1px solid var(--border-strong);
+	border-radius: var(--radius-lg);
+	background: var(--bg-overlay);
+	box-shadow: var(--shadow-overlay);
+	font-size: 12px;
+}
+
+.cmp-github-suggest > span {
+	margin-right: auto;
+	font-family: var(--font-mono);
+	color: var(--fg-faint);
+}
+
+.cmp-github-suggest button {
+	padding: 5px 8px;
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	background: var(--bg-raised);
+	color: var(--fg);
+	font: inherit;
+	cursor: pointer;
+}
+
+.cmp-github-suggest button:hover {
+	border-color: var(--ring);
+	background: var(--hover);
+}
+
+.cmp-btw {
+	position: absolute;
+	right: 0;
+	bottom: calc(100% + 10px);
+	z-index: 30;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	width: min(440px, calc(100vw - 24px));
+	max-height: min(70dvh, 560px);
+	padding: 14px;
+	overflow: auto;
+	border: 1px solid var(--border-strong);
+	border-radius: var(--radius-lg);
+	background: var(--bg-overlay);
+	box-shadow: var(--shadow-overlay);
+	color: var(--fg);
+}
+
+.cmp-btw-head,
+.cmp-btw-actions {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+}
+
+.cmp-btw-label {
+	font-size: 12px;
+	color: var(--fg-muted);
+}
+
+.cmp-btw-close {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 32px;
+	height: 32px;
+	border: 0;
+	border-radius: var(--radius-sm);
+	background: transparent;
+	color: var(--fg-muted);
+	font-size: 20px;
+	cursor: pointer;
+}
+
+.cmp-btw-close:hover {
+	background: var(--hover);
+	color: var(--fg);
+}
+
+.cmp-btw-input {
+	min-height: 72px;
+	resize: vertical;
+	padding: 8px;
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	background: var(--bg-inset);
+	color: var(--fg);
+	font: inherit;
+}
+
+.cmp-btw-error {
+	margin: 0;
+	color: var(--err);
+	font-size: 12px;
+}
+
+.cmp-btw-head-tools,
+.cmp-btw-turn-actions {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.cmp-btw-hint {
+	margin: -4px 0 0;
+	font-size: 11.5px;
+	color: var(--fg-faint);
+}
+
+.cmp-btw-thread {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	max-height: 46dvh;
+	overflow: auto;
+	padding: 8px 0;
+	border-top: 1px solid var(--border);
+	border-bottom: 1px solid var(--border);
+}
+
+.cmp-btw-turn {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.cmp-btw-q {
+	align-self: flex-end;
+	max-width: 90%;
+	padding: 6px 10px;
+	border-radius: var(--radius-lg) var(--radius-lg) 4px var(--radius-lg);
+	background: color-mix(in srgb, var(--accent) 9%, var(--bg-raised));
+	border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--border));
+	white-space: pre-wrap;
+	word-break: break-word;
+}
+
+.cmp-btw-answer {
+	min-width: 0;
+}
+
+.cmp-btw-link {
+	padding: 2px 8px;
+	border: 1px solid var(--border);
+	border-radius: 999px;
+	background: transparent;
+	color: var(--fg-muted);
+	font-size: 11.5px;
+	cursor: pointer;
+}
+
+.cmp-btw-link:hover:not(:disabled) {
+	color: var(--fg);
+	border-color: var(--ring);
+}
+
+@media (max-width: 640px) {
+	.cmp-github-suggest {
+		left: 8px;
+		right: 8px;
+	}
+
+	.cmp-btw {
+		position: fixed;
+		right: 12px;
+		bottom: 100px;
+	}
+}
+.cmp-upload-chip {
+	flex-wrap: wrap;
+}
+
+.cmp-upload-size {
+	flex: none;
+	color: var(--fg-faint);
+	font-size: 11px;
+}
+
+.cmp-upload-progress {
+	width: 72px;
+	height: 4px;
+	accent-color: var(--ring);
+}
+
+.cmp-upload-error {
+	flex-basis: 100%;
+	color: var(--err);
+	font-size: 11px;
+}
+.cmp-composer[data-send-feedback="pending"] .sh-composer-input {
+	animation: cmp-send-fade var(--dur-fast, 120ms) var(--ease-out, ease-out) both;
+}
+
+@keyframes cmp-send-fade {
+	to {
+		opacity: 0.45;
+		transform: translateY(-2px);
+	}
+}
+
+.cmp-upload-chip[data-error="true"] {
+	animation: cmp-upload-shake var(--dur-fast, 120ms) var(--ease-out, ease-out);
+}
+
+@keyframes cmp-upload-shake {
+	25% { transform: translateX(-3px); }
+	75% { transform: translateX(3px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.cmp-composer[data-send-feedback="pending"] .sh-composer-input,
+	.cmp-upload-chip[data-error="true"] {
+		animation: none;
+	}
+}

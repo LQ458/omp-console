@@ -1,0 +1,1 @@
+Choose which configured workspace root is the better fit for a new directory named from the query. `knowledge` is the knowledge-base root; `project` is the projects root. Choose exactly one allowed option. Use the query and root names/children provided as state.

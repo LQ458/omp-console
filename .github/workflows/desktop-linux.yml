@@ -1,0 +1,53 @@
+name: Linux desktop
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build AppImage and deb
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Cache Cargo dependencies and build
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            apps/mac/target
+          key: ${{ runner.os }}-cargo-linux-${{ hashFiles('apps/mac/Cargo.lock', 'apps/mac/rust-toolchain.toml') }}
+
+      - name: Install Tauri Linux prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential curl file libayatana-appindicator3-dev libssl-dev libwebkit2gtk-4.1-dev libxdo-dev librsvg2-dev pkg-config wget
+
+      - name: Install Tauri CLI
+        working-directory: apps/mac
+        run: cargo install tauri-cli --locked --version '^2'
+
+      - name: Build Linux bundles
+        working-directory: apps/mac
+        run: cargo tauri build --config tauri.linux.conf.json --bundles deb,appimage
+      - name: Stage Linux packages
+        run: |
+          mkdir -p artifacts
+          cp apps/mac/target/release/bundle/deb/*.deb artifacts/
+          cp apps/mac/target/release/bundle/appimage/*.AppImage artifacts/
+
+
+      - name: Upload Linux packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: omp-console-linux-x64
+          path: artifacts/*
+          if-no-files-found: error

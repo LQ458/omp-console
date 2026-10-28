@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-automation-eval-result"
+description = "Enables the automation_eval_result command without any pre-configured scope."
+commands.allow = ["automation_eval_result"]
+
+[[permission]]
+identifier = "deny-automation-eval-result"
+description = "Denies the automation_eval_result command without any pre-configured scope."
+commands.deny = ["automation_eval_result"]

@@ -1,0 +1,14 @@
+const ids = ["pane-1", "pane-2", "pane-3", "pane-4"];
+await open(ids[0]);
+await splitRight();
+await open(ids[1]);
+await splitDown();
+await open(ids[2]);
+await focusDir("Left");
+await splitDown();
+await open(ids[3]);
+expect(paneIds().length === 4, "expected 4 panes, got " + paneIds().length);
+const rects = paneIds().map(rectOf);
+const lefts = new Set(rects.map(r => Math.round(r.left / 10)));
+const tops = new Set(rects.map(r => Math.round(r.top / 10)));
+expect(lefts.size === 2 && tops.size === 2, "not a 2x2 grid");

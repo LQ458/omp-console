@@ -1,0 +1,2 @@
+# Extended regular expressions, one per line. Keep personal values out of this tracked file.
+-----BEGIN ([A-Z0-9]+ )?PRIVATE KEY-----

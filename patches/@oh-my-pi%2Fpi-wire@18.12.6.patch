@@ -1,0 +1,129 @@
+diff --git a/dist/types/index.d.ts b/dist/types/index.d.ts
+index 0c0880d..d7ea1b6 100644
+--- a/dist/types/index.d.ts
++++ b/dist/types/index.d.ts
+@@ -91,6 +91,8 @@ export interface EntryBase {
+     id: string;
+     parentId: string | null;
+     timestamp: string;
++    /** Set on an entry written off the active branch (a late background result): the host's leaf stayed here. */
++    activeLeafId?: string | null;
+ }
+ export interface MessageEntry extends EntryBase {
+     type: "message";
+@@ -198,6 +200,13 @@ export type AgentEvent = {
+ } | {
+     type: "thinking_level_changed";
+     thinkingLevel?: string;
++}
++/** Host queue contents; the first `liveSteered` steering entries are already inside the streaming reply. */
++ | {
++    type: "queue_update";
++    steering: string[];
++    followUp: string[];
++    liveSteered: number;
+ };
+ export interface WireModel {
+     id: string;
+@@ -228,6 +237,16 @@ export interface SessionState {
+     contextUsage?: ContextUsage;
+     participants: Participant[];
+     isAborting?: boolean;
++    /**
++     * Tip of the host's current branch: the nearest replicated entry at or above the session leaf (null before any).
++     * Replicated entries carry `parentId` remapped to their nearest replicated ancestor, so a guest shows exactly the
++     * chain from this id. Moves without a new entry when the host rewinds or navigates its tree. Absent from older hosts.
++     */
++    leafId?: string | null;
++    /** Host plan mode is on. Absent from hosts that do not report it. */
++    planMode?: boolean;
++    /** Host tool approval mode (omp `tools.approvalMode`). Absent from hosts that do not report it. */
++    approvalMode?: string;
+ }
+ export interface AgentSnapshot {
+     id: string;
+@@ -323,6 +342,12 @@ export type GuestFrame = {
+      * read-only and rejects their mutating frames.
+      */
+     writeToken?: string;
++    /** A replica checkpoint from a prior welcome; count is over wire-filtered entries. */
++    resume?: {
++        token: string;
++        entryId: string;
++        count: number;
++    };
+ } | {
+     t: "prompt";
+     text: string;
+@@ -359,6 +384,10 @@ export type HostFrame = {
+      * with `final: true`).
+      */
+     entryCount: number;
++    /** Opaque host-issued identity for validating the guest's next resume request. */
++    replicaToken?: string;
++    /** Number of existing wire entries represented before this delta's chunks. */
++    resumeBase?: number;
+     /** True when this peer joined through a read-only (view) link. */
+     readOnly?: boolean;
+ }
+diff --git a/src/index.ts b/src/index.ts
+index d142c07..65a65ab 100644
+--- a/src/index.ts
++++ b/src/index.ts
+@@ -117,6 +117,8 @@ export interface EntryBase {
+ 	id: string;
+ 	parentId: string | null;
+ 	timestamp: string;
++	/** Set on an entry written off the active branch (a late background result): the host's leaf stayed here. */
++	activeLeafId?: string | null;
+ }
+ 
+ export interface MessageEntry extends EntryBase {
+@@ -195,7 +197,9 @@ export type AgentEvent =
+ 	| { type: "auto_compaction_end"; aborted: boolean; willRetry: boolean; errorMessage?: string; skipped?: boolean }
+ 	| { type: "auto_retry_start"; attempt: number; maxAttempts: number; delayMs: number; errorMessage: string }
+ 	| { type: "auto_retry_end"; success: boolean; attempt: number; finalError?: string }
+-	| { type: "thinking_level_changed"; thinkingLevel?: string };
++	| { type: "thinking_level_changed"; thinkingLevel?: string }
++	/** Host queue contents; the first `liveSteered` steering entries are already inside the streaming reply. */
++	| { type: "queue_update"; steering: string[]; followUp: string[]; liveSteered: number };
+ 
+ // ═══════════════════════════════════════════════════════════════════════════
+ // State & agents
+@@ -233,6 +237,16 @@ export interface SessionState {
+ 	contextUsage?: ContextUsage;
+ 	participants: Participant[];
+ 	isAborting?: boolean;
++	/**
++	 * Tip of the host's current branch: the nearest replicated entry at or above the session leaf (null before any).
++	 * Replicated entries carry `parentId` remapped to their nearest replicated ancestor, so a guest shows exactly the
++	 * chain from this id. Moves without a new entry when the host rewinds or navigates its tree. Absent from older hosts.
++	 */
++	leafId?: string | null;
++	/** Host plan mode is on. Absent from hosts that do not report it. */
++	planMode?: boolean;
++	/** Host tool approval mode (omp `tools.approvalMode`). Absent from hosts that do not report it. */
++	approvalMode?: string;
+ }
+ 
+ export interface AgentSnapshot {
+@@ -336,6 +350,8 @@ export type GuestFrame =
+ 			 * read-only and rejects their mutating frames.
+ 			 */
+ 			writeToken?: string;
++			/** A replica checkpoint from a prior welcome; count is over wire-filtered entries. */
++			resume?: { token: string; entryId: string; count: number };
+ 	  }
+ 	| { t: "prompt"; text: string; images?: ImageContent[] }
+ 	| { t: "ui-response"; reqId: number; value?: CollabUiResponseValue }
+@@ -360,6 +376,10 @@ export type HostFrame =
+ 			 * with `final: true`).
+ 			 */
+ 			entryCount: number;
++			/** Opaque host-issued identity for validating the guest's next resume request. */
++			replicaToken?: string;
++			/** Number of existing wire entries represented before this delta's chunks. */
++			resumeBase?: number;
+ 			/** True when this peer joined through a read-only (view) link. */
+ 			readOnly?: boolean;
+ 	  }

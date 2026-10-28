@@ -1,0 +1,18 @@
+const ids = ["pane-1", "pane-2", "pane-3", "pane-4", "pane-5", "pane-6"];
+await open(ids[0]);
+await splitRight();
+await open(ids[1]);
+await splitRight();
+await open(ids[2]);
+await focusDir("Left");
+await focusDir("Left");
+await splitDown();
+await open(ids[3]);
+await focusDir("Right");
+await splitDown();
+await open(ids[4]);
+await focusDir("Right");
+await splitDown();
+await open(ids[5]);
+expect(paneIds().length === 6, "expected 6 panes, got " + paneIds().length);
+await sleep(1500);

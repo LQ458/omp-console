@@ -1,0 +1,76 @@
+.dk-action-mark {
+	display: inline-flex;
+	flex: none;
+	align-items: center;
+	justify-content: center;
+	vertical-align: -2px;
+}
+
+.dk-action-mark-pending svg {
+	animation: dk-action-spin var(--dur-slow, 320ms) linear infinite;
+}
+
+.dk-action-mark-success {
+	color: var(--ok);
+	animation: dk-action-pop var(--dur-fast, 120ms) var(--ease-spring, var(--ease-out));
+}
+
+.dk-action-mark-failure {
+	color: var(--err);
+	animation: dk-action-shake var(--dur-base, 200ms) var(--ease-in-out, ease-in-out);
+}
+
+.dk-action-message {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	font-size: 11px;
+}
+
+.dk-action-message-pending {
+	color: var(--fg-faint);
+}
+
+.dk-action-message-success {
+	color: var(--ok);
+}
+
+.dk-action-message-failure {
+	color: var(--err);
+	animation: dk-action-shake var(--dur-base, 200ms) var(--ease-in-out, ease-in-out);
+}
+
+@keyframes dk-action-spin {
+	to {
+		transform: rotate(1turn);
+	}
+}
+
+@keyframes dk-action-pop {
+	from {
+		transform: scale(0.72);
+		opacity: 0;
+	}
+	to {
+		transform: scale(1);
+		opacity: 1;
+	}
+}
+
+@keyframes dk-action-shake {
+	25% {
+		transform: translateX(-2px);
+	}
+	75% {
+		transform: translateX(2px);
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.dk-action-mark-pending svg,
+	.dk-action-mark-success,
+	.dk-action-mark-failure,
+	.dk-action-message-failure {
+		animation: none !important;
+	}
+}

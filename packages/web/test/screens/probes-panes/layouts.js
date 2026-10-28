@@ -1,0 +1,26 @@
+// Named layouts: save three panes, shrink to one, load the layout back.
+await open("pane-1");
+await splitRight();
+await open("pane-2");
+await splitDown();
+await open("pane-3");
+const menuButton = [...document.querySelectorAll(".pn-bar-btn-text")][0];
+menuButton?.click();
+await sleep(300);
+await setValue(".pn-menu-save input", "study");
+document.querySelector(".pn-menu-save button")?.click();
+await sleep(400);
+expect([...document.querySelectorAll(".pn-menu-item")].some(el => el.textContent === "study"), "saved layout not listed");
+document.body.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+await sleep(200);
+await key("w");
+await key("w");
+expect(paneIds().length === 1, "expected one pane before loading");
+document.querySelectorAll(".pn-bar-btn-text")[0]?.click();
+await sleep(300);
+[...document.querySelectorAll(".pn-menu-item")].find(el => el.textContent === "study")?.click();
+await sleep(2000);
+expect(paneIds().length === 3, "loading the layout should bring back 3 panes, got " + paneIds().length);
+expect(document.querySelectorAll(".pn-frame .sh-transcript").length === 3, "restored panes should show their sessions");
+document.querySelectorAll(".pn-bar-btn-text")[0]?.click();
+await sleep(300);

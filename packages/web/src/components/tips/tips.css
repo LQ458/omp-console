@@ -1,0 +1,54 @@
+/* A quiet one-line hint, not a card: it should read as part of the composer. */
+.dk-tip {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	margin: 0 2px 4px;
+	padding: 0;
+	color: var(--fg-faint);
+	font-size: 11px;
+	line-height: 1.4;
+}
+
+.dk-tip > span {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.dk-tip > svg {
+	flex: none;
+	color: var(--accent);
+}
+
+.dk-tip > span {
+	flex: 1;
+	min-width: 0;
+}
+
+.dk-tip-dismiss {
+	flex: none;
+	display: grid;
+	place-items: center;
+	width: 28px;
+	height: 28px;
+	padding: 0;
+	border: 0;
+	border-radius: var(--radius-sm);
+	background: transparent;
+	color: var(--fg-faint);
+	cursor: pointer;
+	transition: color var(--dur-fast, 120ms) var(--ease-out), background var(--dur-fast, 120ms) var(--ease-out);
+}
+
+.dk-tip-dismiss:hover {
+	background: var(--hover);
+	color: var(--fg);
+}
+
+@media (pointer: coarse) {
+	.dk-tip-dismiss {
+		width: 32px;
+		height: 32px;
+	}
+}

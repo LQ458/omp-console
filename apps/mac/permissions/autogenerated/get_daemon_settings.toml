@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-get-daemon-settings"
+description = "Enables the get_daemon_settings command without any pre-configured scope."
+commands.allow = ["get_daemon_settings"]
+
+[[permission]]
+identifier = "deny-get-daemon-settings"
+description = "Denies the get_daemon_settings command without any pre-configured scope."
+commands.deny = ["get_daemon_settings"]

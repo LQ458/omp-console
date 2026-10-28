@@ -1,0 +1,21 @@
+// A reload brings the layout back: the auto-saved layout is read by a second page load (an iframe shares storage).
+await open("pane-1");
+await splitRight();
+await open("pane-2");
+await splitDown();
+await open("pane-3");
+await sleep(900);
+const saved = JSON.parse(localStorage.getItem("omp-console-layout:current") ?? "null");
+expect(saved && saved.panes.length === 3, "no auto-saved layout with 3 panes");
+expect(saved && saved.dock, "the grid was not saved with the layout");
+const frame = document.createElement("iframe");
+frame.style.cssText = "position:fixed;inset:0;width:100%;height:100%;border:0;z-index:99999;background:#000";
+frame.src = location.pathname;
+document.body.appendChild(frame);
+await sleep(3500);
+const doc = frame.contentDocument;
+const panes = doc ? [...doc.querySelectorAll(".pn-frame")] : [];
+expect(panes.length === 3, "restored page shows " + panes.length + " panes");
+expect(doc && doc.querySelectorAll(".pn-frame .sh-transcript").length === 3, "restored panes did not reconnect their sessions");
+const sizes = panes.map(el => Math.round(el.getBoundingClientRect().width));
+expect(new Set(sizes).size <= 2, "restored grid shape is off: " + sizes.join(","));

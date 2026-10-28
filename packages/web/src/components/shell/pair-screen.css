@@ -1,0 +1,146 @@
+.pair-page {
+	--pair-background: var(--shell-background, #f2f4f7);
+	--pair-surface: var(--shell-surface, #fff);
+	--pair-text: var(--shell-text, #17191d);
+	--pair-muted: var(--shell-muted, #646b75);
+	--pair-border: var(--shell-border, #d9dde4);
+	min-height: 100vh;
+	min-height: 100dvh;
+	box-sizing: border-box;
+	display: grid;
+	place-items: center;
+	padding: clamp(1rem, 4vw, 3rem);
+	background: var(--pair-background);
+	color: var(--pair-text);
+	font: 15px/1.5 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.pair-card {
+	box-sizing: border-box;
+	width: min(100%, 28rem);
+	padding: clamp(1.5rem, 5vw, 2.5rem);
+	border: 1px solid var(--pair-border);
+	border-radius: 1.25rem;
+	background: var(--pair-surface);
+	box-shadow: 0 1.5rem 4rem rgb(20 25 35 / 12%);
+}
+
+.pair-mark {
+	width: 2.75rem;
+	height: 2.75rem;
+	display: grid;
+	place-items: center;
+	border-radius: 0.85rem;
+	background: #243b53;
+	color: #fff;
+	font-size: 0.9rem;
+	font-weight: 750;
+	letter-spacing: 0.04em;
+}
+
+.pair-eyebrow {
+	margin: 1.4rem 0 0.25rem;
+	color: var(--pair-muted);
+	font-size: 0.75rem;
+	font-weight: 700;
+	letter-spacing: 0.11em;
+	text-transform: uppercase;
+}
+
+.pair-card h1 {
+	margin: 0;
+	font-size: clamp(1.7rem, 6vw, 2rem);
+	letter-spacing: -0.035em;
+}
+
+.pair-description,
+.pair-help {
+	color: var(--pair-muted);
+}
+
+.pair-description {
+	margin: 0.65rem 0 1.75rem;
+}
+
+.pair-form {
+	display: grid;
+	gap: 0.65rem;
+}
+
+.pair-form label {
+	margin-top: 0.4rem;
+	font-size: 0.83rem;
+	font-weight: 650;
+}
+
+.pair-form input {
+	box-sizing: border-box;
+	width: 100%;
+	min-height: 2.9rem;
+	padding: 0.7rem 0.8rem;
+	border: 1px solid var(--pair-border);
+	border-radius: 0.65rem;
+	background: transparent;
+	color: inherit;
+	font: inherit;
+}
+
+.pair-form input[name="code"] {
+	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+	font-size: 1.1rem;
+	font-weight: 650;
+	letter-spacing: 0.08em;
+}
+
+.pair-form input:focus-visible,
+.pair-submit:focus-visible {
+	outline: 3px solid #5b9dff;
+	outline-offset: 2px;
+}
+
+.pair-submit {
+	min-height: 2.9rem;
+	margin-top: 0.7rem;
+	border: 0;
+	border-radius: 0.65rem;
+	background: #244b72;
+	color: #fff;
+	font: inherit;
+	font-weight: 700;
+	cursor: pointer;
+}
+
+.pair-submit:disabled {
+	opacity: 0.55;
+	cursor: not-allowed;
+}
+
+.pair-error {
+	margin: 0.2rem 0 0;
+	color: #b42318;
+	font-size: 0.87rem;
+}
+
+.pair-help {
+	margin: 1.4rem 0 0;
+	font-size: 0.82rem;
+}
+
+.pair-help code {
+	color: var(--pair-text);
+	font-size: 0.9em;
+}
+
+@media (prefers-color-scheme: dark) {
+	.pair-page {
+		--pair-background: var(--shell-background, #14171b);
+		--pair-surface: var(--shell-surface, #1e2228);
+		--pair-text: var(--shell-text, #f1f3f5);
+		--pair-muted: var(--shell-muted, #aab2bd);
+		--pair-border: var(--shell-border, #3a414a);
+	}
+
+	.pair-card {
+		box-shadow: 0 1.5rem 4rem rgb(0 0 0 / 30%);
+	}
+}

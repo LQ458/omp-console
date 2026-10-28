@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-read-pairing-code"
+description = "Enables the read_pairing_code command without any pre-configured scope."
+commands.allow = ["read_pairing_code"]
+
+[[permission]]
+identifier = "deny-read-pairing-code"
+description = "Denies the read_pairing_code command without any pre-configured scope."
+commands.deny = ["read_pairing_code"]

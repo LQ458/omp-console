@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="change_daemon_url"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/shortcut_change_url_short"
+        android:shortcutLongLabel="@string/shortcut_change_url_long">
+        <intent
+            android:action="dev.ompconsole.mobile.CHANGE_URL"
+            android:targetPackage="dev.ompconsole.mobile"
+            android:targetClass="dev.ompconsole.mobile.MainActivity" />
+    </shortcut>
+</shortcuts>

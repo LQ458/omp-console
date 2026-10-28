@@ -1,0 +1,5 @@
+PID PPID LSTART RSS TTY COMMAND
+100 1 Tue Oct 20 10:00:00 2026 1200 ?? /usr/local/bin/omp --cwd /tmp/a
+101 100 Tue Oct 20 10:01:00 2026 500 ?? /tmp/omp-helper
+102 101 Tue Oct 20 10:02:00 2026 250 ?? /usr/bin/tool child
+200 1 Tue Oct 20 09:00:00 2026 100 ?? daemon_broker --detached

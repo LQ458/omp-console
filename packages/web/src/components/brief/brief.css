@@ -1,0 +1,236 @@
+.dk-brief {
+	display: flex;
+	flex-direction: column;
+	gap: 7px;
+	min-width: 0;
+	max-width: 100%;
+	box-sizing: border-box;
+	margin: 0 4px 4px;
+	padding: 10px;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-lg);
+	background: var(--bg-raised);
+	color: var(--fg);
+}
+
+.dk-brief-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	font-size: 12px;
+}
+
+.dk-brief-head .sh-btn {
+	flex: none;
+	font-size: 11px;
+}
+
+.dk-brief-groups,
+.dk-brief-group {
+	display: flex;
+	flex-direction: column;
+	gap: 3px;
+	min-width: 0;
+}
+
+.dk-brief-groups {
+	gap: 8px;
+}
+
+.dk-brief-group h2 {
+	margin: 0;
+	padding: 0 4px;
+	font-size: 10px;
+	font-weight: 600;
+	color: var(--fg-faint);
+}
+
+.dk-brief-lines {
+	min-width: 0;
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.dk-brief-lines button {
+	width: 100%;
+	min-width: 0;
+	max-width: 100%;
+	box-sizing: border-box;
+	min-height: 30px;
+	display: flex;
+	align-items: center;
+	gap: 7px;
+	padding: 5px 4px;
+	border: 0;
+	border-radius: var(--radius);
+	background: transparent;
+	color: var(--fg);
+	text-align: left;
+	font-size: 11px;
+	cursor: pointer;
+	overflow: hidden;
+}
+
+.dk-brief-lines button:hover:not(:disabled) {
+	background: var(--hover);
+}
+
+.dk-brief-lines button:disabled {
+	cursor: default;
+	opacity: 0.7;
+}
+
+.dk-brief-lines svg {
+	flex: none;
+	color: var(--accent);
+}
+
+.dk-brief-line-content {
+	display: flex;
+	gap: 4px;
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+	white-space: nowrap;
+}
+
+.dk-brief-line-content strong {
+	flex: none;
+	max-width: 45%;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.dk-brief-line-text {
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.dk-brief-time {
+	flex: none;
+	font-size: 10px;
+	color: var(--fg-muted);
+}
+
+.dk-brief-empty {
+	margin: 0 4px;
+	font-size: 11px;
+	color: var(--fg-muted);
+}
+
+
+.dk-brief-skeleton {
+	min-height: 72px;
+}
+
+.dk-brief-skeleton-lines {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.dk-brief-skeleton-lines span:first-child {
+	width: 90%;
+}
+
+.dk-brief-skeleton-lines span:last-child {
+	width: 68%;
+}
+.dk-brief-error p {
+	margin: 0;
+	font-size: 11px;
+	color: var(--err);
+}
+
+.dk-brief-more {
+	align-self: flex-start;
+	border: 0;
+	background: none;
+	padding: 2px 4px;
+	font-size: 11px;
+	color: var(--accent, currentColor);
+	cursor: pointer;
+}
+
+@media (max-width: 600px) {
+	.sh-connect[data-state="idle"] {
+		display: flex;
+		flex-direction: column;
+		align-items: stretch;
+		justify-content: flex-start;
+		gap: 8px;
+	}
+
+	.sh-connect[data-state="idle"] > .sh-connect-top {
+		order: 0;
+		flex: none;
+	}
+
+	.sh-connect[data-state="idle"] > .dk-brief {
+		order: 1;
+	}
+
+	.sh-connect[data-state="idle"] > .dk-home-card {
+		order: 2;
+		align-self: stretch;
+		margin: 0;
+	}
+
+	.sh-connect[data-state="idle"] > :not(.sh-ambient):not(.sh-connect-top):not(.dk-brief):not(.dk-home-card) {
+		order: 3;
+	}
+}
+
+/* Desktop: when there is a return brief, it comes first; "Pick a session" moves below it instead of taking the top
+   third of the pane. */
+@media (min-width: 601px) {
+	.sh-connect[data-state="idle"]:has(> .dk-brief) {
+		display: flex;
+		flex-direction: column;
+		justify-content: flex-start;
+		gap: 12px;
+	}
+
+	.sh-connect[data-state="idle"]:has(> .dk-brief) > .sh-connect-top {
+		order: 0;
+		flex: none;
+	}
+
+	.sh-connect[data-state="idle"]:has(> .dk-brief) > .dk-brief {
+		order: 1;
+		flex: none;
+	}
+
+	.sh-connect[data-state="idle"]:has(> .dk-brief) > :not(.sh-ambient):not(.sh-connect-top):not(.dk-brief):not(.dk-home-card) {
+		order: 2;
+		flex: none;
+	}
+
+	.sh-connect[data-state="idle"]:has(> .dk-brief) > .dk-home-card {
+		order: 3;
+		flex: none;
+		margin: 0;
+		padding: 12px 16px;
+		align-self: stretch;
+		box-shadow: none;
+	}
+
+	.sh-connect[data-state="idle"]:has(> .dk-brief) > .dk-home-card .sh-connect-title {
+		font-size: 15px;
+	}
+}
+
+@media (pointer: coarse), (max-width: 1099.98px) {
+	.dk-brief-lines button,
+	.dk-brief-more {
+		min-height: 44px;
+	}
+}

@@ -1,0 +1,12 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "local-app",
+  "description": "Native shell commands are available only to bundled omp console UI pages.",
+  "windows": ["main", "settings"],
+  "permissions": [
+    "core:default",
+    "allow-connect-daemon",
+    "allow-get-daemon-settings",
+    "allow-save-daemon-settings"
+  ]
+}

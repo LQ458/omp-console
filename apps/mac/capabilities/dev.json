@@ -1,0 +1,15 @@
+{
+  "$schema": "../gen/schemas/remote-schema.json",
+  "identifier": "dev-ui",
+  "description": "Local development frontend only; omitted from release configuration.",
+  "windows": ["main", "settings"],
+  "remote": {
+    "urls": ["http://127.0.0.1:1420"]
+  },
+  "permissions": [
+    "core:default",
+    "allow-connect-daemon",
+    "allow-get-daemon-url",
+    "allow-save-daemon-url"
+  ]
+}

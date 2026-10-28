@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Daemon settings — omp console</title>
+		<link rel="stylesheet" href="./style.css" />
+		<script src="./app.js" defer></script>
+	</head>
+	<body data-page="settings">
+		<main class="card settings">
+			<h1>Daemon settings</h1>
+			<p>Use HTTPS for remote daemons. HTTP is allowed only for loopback addresses.</p>
+			<form id="settings-form">
+				<label for="url">Daemon URL</label>
+				<input id="url" name="url" type="url" required autocomplete="url" spellcheck="false" />
+				<label for="state-dir">Daemon state directory</label>
+				<input id="state-dir" name="state-dir" type="text" required autocomplete="off" spellcheck="false" />
+				<p class="hint">Pairing codes are read from <code>pairing-code</code> in this directory. If it is missing, run <code>omp-console pair</code>. Use an absolute path or a path under <code>~</code>.</p>
+				<p class="error" id="error" role="alert"></p>
+				<div class="actions">
+					<button id="cancel" class="secondary" type="button">Cancel</button>
+					<button id="save" type="submit">Save</button>
+				</div>
+			</form>
+		</main>
+	</body>
+</html>

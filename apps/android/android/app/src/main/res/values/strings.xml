@@ -1,0 +1,9 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">omp console</string>
+    <string name="title_activity_main">omp console</string>
+    <string name="package_name">dev.ompconsole.mobile</string>
+    <string name="custom_url_scheme">dev.ompconsole.mobile</string>
+    <string name="shortcut_change_url_short">Change URL</string>
+    <string name="shortcut_change_url_long">Change daemon URL</string>
+</resources>

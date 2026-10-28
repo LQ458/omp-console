@@ -1,0 +1,382 @@
+/* Graph extras (B8): edge toggles, message edges, node menu, "omp:" equivalents. `ag-*` prefix; token vars only. */
+
+/* ── omp equivalent line ──────────────────────────────────────────── */
+
+.ag-omp {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	min-width: 0;
+	padding: 3px 4px 3px 8px;
+	border: 1px dashed var(--border);
+	border-radius: var(--radius);
+	color: var(--fg-faint);
+	font-size: 11px;
+}
+
+.ag-omp-label {
+	flex: none;
+	font-family: var(--font-mono);
+	font-weight: 600;
+	color: var(--accent-a);
+}
+
+.ag-omp-text {
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+	color: var(--fg-muted);
+	font-family: var(--font-mono);
+	font-size: 11px;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.ag-omp-copy {
+	flex: none;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 26px;
+	height: 26px;
+	border: 0;
+	border-radius: 6px;
+	background: none;
+	color: var(--fg-muted);
+	cursor: pointer;
+}
+
+.ag-omp-copy:hover {
+	background: var(--hover);
+	color: var(--fg);
+}
+
+.ag-omp-copy:focus-visible {
+	outline: 2px solid var(--ring);
+	outline-offset: 1px;
+}
+
+/* ── edge toggles ─────────────────────────────────────────────────── */
+
+.ag-edgebar {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	padding: 0 0 2px;
+}
+
+.ag-edgetoggle {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	min-height: 32px;
+	padding: 0 10px;
+	border: 1px solid var(--border);
+	border-radius: 999px;
+	background: transparent;
+	color: var(--fg-faint);
+	font: inherit;
+	font-size: 12px;
+	cursor: pointer;
+}
+
+.ag-edgetoggle--on {
+	border-color: var(--border-strong);
+	background: var(--bg-raised);
+	color: var(--fg);
+}
+
+.ag-edgetoggle:focus-visible {
+	outline: 2px solid var(--ring);
+	outline-offset: 1px;
+}
+
+.ag-edgetoggle-swatch {
+	width: 16px;
+	height: 0;
+	border-top: 2px solid var(--border-strong);
+}
+
+.ag-edgetoggle--message .ag-edgetoggle-swatch {
+	border-top-color: var(--accent-a);
+}
+
+.ag-edgetoggle--reply .ag-edgetoggle-swatch {
+	border-top: 2px dashed var(--accent-a);
+}
+
+.ag-edgetoggle--broadcast .ag-edgetoggle-swatch {
+	border-top: 2px dotted var(--accent);
+}
+
+.ag-edgetoggle:not(.ag-edgetoggle--on) .ag-edgetoggle-swatch {
+	opacity: 0.4;
+}
+
+.ag-edgetoggle-count {
+	min-width: 16px;
+	padding: 0 5px;
+	border-radius: 999px;
+	background: var(--bg-inset);
+	font-family: var(--font-mono);
+	font-size: 10.5px;
+	line-height: 16px;
+	text-align: center;
+}
+
+/* ── message edges ────────────────────────────────────────────────── */
+
+.ag-medge {
+	fill: none;
+	stroke-width: 1.75;
+	pointer-events: none;
+}
+
+.ag-medge--message {
+	stroke: var(--accent-a);
+}
+
+.ag-medge--reply {
+	stroke: var(--accent-a);
+	stroke-dasharray: 6 4;
+}
+
+.ag-medge--broadcast {
+	stroke: var(--accent);
+	stroke-dasharray: 1.5 4;
+	stroke-linecap: round;
+}
+
+.ag-arrow--message path,
+.ag-arrow--reply path {
+	fill: var(--accent-a);
+}
+
+.ag-arrow--broadcast path {
+	fill: var(--accent);
+}
+
+.ag-mbadge rect {
+	fill: var(--bg-raised);
+	stroke: var(--accent-a);
+	stroke-width: 1.25;
+}
+
+.ag-mbadge--broadcast rect {
+	stroke: var(--accent);
+}
+
+.ag-mbadge text {
+	fill: var(--fg);
+	font-family: var(--font-mono);
+	font-size: 11px;
+	font-weight: 600;
+	pointer-events: none;
+}
+
+/* ── node menu ────────────────────────────────────────────────────── */
+
+.ag-menu-root {
+	position: fixed;
+	inset: 0;
+	z-index: 90;
+	pointer-events: auto;
+}
+
+.ag-menu-root[popover="manual"] {
+	inset: 0;
+	width: auto;
+	height: auto;
+	max-width: none;
+	max-height: none;
+	margin: 0;
+	padding: 0;
+	overflow: visible;
+	border: 0;
+	background: transparent;
+	color: inherit;
+}
+
+.ag-menu-backdrop {
+	position: absolute;
+	inset: 0;
+}
+
+.ag-menu {
+	position: fixed;
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	max-height: calc(100vh - 16px);
+	padding: 6px;
+	overflow-y: auto;
+	border: 1px solid var(--border-strong);
+	border-radius: var(--radius-lg);
+	background: var(--bg-raised);
+	box-shadow: var(--shadow-float, var(--shadow-overlay));
+	outline: none;
+}
+
+.ag-menu-title {
+	padding: 6px 8px 4px;
+	overflow: hidden;
+	color: var(--fg-muted);
+	font-size: 12px;
+	font-weight: 600;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.ag-menu-title--task {
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
+	white-space: normal;
+	line-height: 1.35;
+}
+
+.ag-menu-item {
+	display: flex;
+	flex-direction: column;
+	gap: 3px;
+	padding: 3px 2px 5px;
+	border-radius: var(--radius);
+}
+
+.ag-menu-item + .ag-menu-item {
+	border-top: 1px solid var(--border);
+}
+
+.ag-menu-run {
+	display: flex;
+	align-items: baseline;
+	flex-wrap: wrap;
+	gap: 2px 8px;
+	min-height: 36px;
+	padding: 0 8px;
+	border: 0;
+	border-radius: var(--radius);
+	background: none;
+	color: var(--fg);
+	font: inherit;
+	font-size: 13.5px;
+	font-weight: 500;
+	text-align: left;
+	cursor: pointer;
+	align-content: center;
+}
+
+.ag-menu-run:hover:not(:disabled) {
+	background: var(--hover);
+}
+
+.ag-menu-run:focus-visible {
+	outline: 2px solid var(--ring);
+	outline-offset: -2px;
+}
+
+.ag-menu-run:disabled {
+	color: var(--fg-faint);
+	cursor: not-allowed;
+}
+
+.ag-menu-item--danger .ag-menu-run:not(:disabled) {
+	color: var(--err);
+}
+
+.ag-menu-reason {
+	color: var(--fg-faint);
+	font-size: 11px;
+	font-weight: 400;
+}
+
+.ag-menu-notice {
+	padding: 12px 10px;
+	color: var(--ok);
+	font-size: 13px;
+}
+
+.ag-menu-compose,
+.ag-menu-model {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	padding: 4px;
+}
+
+.ag-menu-compose-head {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	font-size: 12.5px;
+	font-weight: 600;
+}
+
+.ag-menu-compose-foot {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+}
+
+.ag-menu-compose-foot .ag-omp {
+	flex: 1;
+	min-width: 0;
+}
+
+.ag-menu-textarea {
+	width: 100%;
+	padding: 8px 10px;
+	border: 1px solid var(--border-strong);
+	border-radius: var(--radius);
+	background: var(--bg-inset);
+	color: var(--fg);
+	font: inherit;
+	font-size: 13.5px;
+	resize: vertical;
+}
+
+.ag-menu-textarea:focus-visible {
+	outline: 2px solid var(--ring);
+	outline-offset: 0;
+}
+
+.ag-menu:focus,
+.ag-menu:focus-visible {
+	outline: none;
+}
+
+/* In the menu the equivalent may wrap: a cut-off command is no use to copy by eye. */
+.ag-menu .ag-omp-text {
+	white-space: normal;
+	overflow-wrap: anywhere;
+}
+
+@media (max-width: 520px) {
+	.ag-edgebar {
+		flex-wrap: nowrap;
+		gap: 4px;
+	}
+
+	.ag-edgetoggle {
+		gap: 4px;
+		padding: 0 8px;
+		font-size: 11.5px;
+	}
+
+	.ag-edgetoggle-swatch {
+		display: none;
+	}
+
+	.ag-tab {
+		gap: 4px;
+		padding: 0 10px;
+	}
+}
+
+@media (pointer: coarse) {
+	.ag-omp-copy {
+		width: 36px;
+		height: 36px;
+	}
+}

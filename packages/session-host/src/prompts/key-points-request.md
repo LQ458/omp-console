@@ -1,0 +1,3 @@
+Session transcript excerpt:
+
+{{transcript}}

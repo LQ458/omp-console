@@ -1,0 +1,58 @@
+.q-estimate {
+	display: inline-flex;
+	padding: 4px 7px;
+	color: var(--accent);
+	background: color-mix(in srgb, var(--accent) 10%, transparent);
+	border: 1px solid color-mix(in srgb, var(--accent) 26%, transparent);
+	border-radius: 999px;
+	font: 500 10px / 1.2 var(--font-mono);
+}
+
+.q-header-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+	height: 22px;
+	padding: 0 8px;
+	color: var(--fg-muted);
+	background: var(--bg-raised);
+	border: 1px solid var(--border);
+	border-radius: 999px;
+	font: 400 10px / 1 var(--font-mono);
+	white-space: nowrap;
+}
+
+/* "5h resets in 3h 18m": when headroom comes back, next to how much is left. */
+.q-header-reset {
+	color: var(--fg-faint);
+	white-space: nowrap;
+}
+
+.q-header-reset::before {
+	content: "·";
+	margin-right: 5px;
+}
+
+.q-header-chip strong {
+	color: var(--fg);
+	font-weight: 650;
+}
+
+.q-header-chip.q-tone-warn {
+	color: var(--warn);
+	border-color: color-mix(in srgb, var(--warn) 45%, var(--border));
+}
+
+.q-header-chip.q-tone-danger {
+	color: var(--err);
+	border-color: color-mix(in srgb, var(--err) 45%, var(--border));
+}
+
+.q-header-chip.q-tone-danger strong,
+.q-header-chip.q-tone-warn strong {
+	color: inherit;
+}
+
+@media (max-width: 720px) {
+	.q-header-chip span { display: none; }
+}

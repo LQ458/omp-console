@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-confirm-move"
+description = "Enables the confirm_move command without any pre-configured scope."
+commands.allow = ["confirm_move"]
+
+[[permission]]
+identifier = "deny-confirm-move"
+description = "Denies the confirm_move command without any pre-configured scope."
+commands.deny = ["confirm_move"]

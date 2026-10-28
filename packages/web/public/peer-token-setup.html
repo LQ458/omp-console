@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Connect another computer · omp-console</title>
+	<style>
+		body { max-width: 48rem; margin: 2rem auto; padding: 0 1rem; color: #20242b; font: 16px/1.55 system-ui, sans-serif; }
+		code, pre { overflow-wrap: anywhere; }
+		pre { padding: 1rem; background: #f2f4f7; border-radius: .6rem; white-space: pre-wrap; }
+	</style>
+</head>
+<body>
+	<main>
+		<h1>Connect another computer</h1>
+		<p>This token lets this computer access another omp-console computer. Use a dedicated pairing token, keep it on the daemon host, and store only its path in Settings → Advanced → Optional features.</p>
+		<ol>
+			<li>On the other computer, request a one-time pairing code with <code>omp-console-daemon pair --state-dir &lt;state-dir&gt;</code>. Its daemon must be running.</li>
+			<li>On this computer, submit the code to the other computer's <code>POST /api/pair</code> endpoint. The response sets an <code>omc_device</code> cookie; its value is the access token.</li>
+			<li>Write that value alone to a regular file on this computer with mode <code>0600</code>. Enter the file path, URL, ID, and name under Settings → Advanced → Optional features.</li>
+		</ol>
+		<p>Example for a shell on the daemon host. Keep the response header file private and delete it after use:</p>
+<pre><code>set -eu
+umask 077
+printf "Pairing code: "
+IFS= read -r -s PAIR_CODE
+printf '\n'
+case "$PAIR_CODE" in
+  *[!A-Z0-9-]*|'') printf 'Invalid pairing code.\n'; exit 1 ;;
+esac
+HEADERS=$(mktemp)
+trap 'rm -f "$HEADERS"; unset PAIR_CODE TOKEN 2&gt;/dev/null || true' EXIT
+curl --fail-with-body -sS -D "$HEADERS" -o /dev/null \
+  -H 'content-type: application/json' \
+  --data "{\"code\":\"$PAIR_CODE\",\"label\":\"omp-console other computer\"}" \
+  'https://other-computer.example.ts.net/api/pair'
+TOKEN=$(awk 'tolower($1) == "set-cookie:" &amp;&amp; $2 ~ /^omc_device=/ { sub(/^omc_device=/, "", $2); sub(/;.*/, "", $2); print $2; exit }' "$HEADERS")
+test -n "$TOKEN"
+printf '%s\n' "$TOKEN" &gt; "$HOME/.omp-console-peer-token"
+chmod 600 "$HOME/.omp-console-peer-token"
+unset TOKEN PAIR_CODE
+rm -f "$HEADERS"
+trap - EXIT</code></pre>
+		<p>Replace the example hostname and token path. The other computer’s URL must use HTTPS or loopback. Never paste the token into <code>config.json</code>, a URL, issue, or screenshot. Revoke the paired device from the other computer’s daemon under Settings → Devices when the connection is no longer needed.</p>
+	</main>
+</body>
+</html>

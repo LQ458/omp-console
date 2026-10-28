@@ -1,0 +1,12 @@
+# Default gitleaks rules, minus known non-secrets: fixed test vectors (WebSocket keys, push-subscription
+# keys, codec vectors) and upstream omp model-catalog patches whose "tokenizer" fields look like keys.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Test fixtures and generated upstream patches"
+paths = [
+  '''(^|/)patches/@oh-my-pi%2F[^/]+\.patch$''',
+  '''(^|/)packages/daemon/test/''',
+  '''(^|/)packages/web/test/codec\.test\.ts$''',
+]

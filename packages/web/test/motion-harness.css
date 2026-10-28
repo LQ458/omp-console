@@ -1,0 +1,35 @@
+.motion-harness {
+	position: relative;
+	min-height: 100dvh;
+	padding: 14px;
+	color: var(--fg);
+	background: var(--bg);
+	font-family: var(--font-sans);
+}
+
+.motion-harness-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	margin-bottom: 16px;
+}
+
+.motion-harness-head h1 {
+	margin: 0;
+	font-size: 18px;
+}
+
+.motion-harness-head button {
+	min-height: 44px;
+	padding: 0 12px;
+	border: 1px solid var(--border-strong);
+	border-radius: var(--radius);
+	color: var(--fg);
+	background: var(--bg-raised);
+	font: inherit;
+}
+
+.motion-harness-figure {
+	margin: 16px 0;
+}

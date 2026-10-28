@@ -1,0 +1,105 @@
+.tr-quick-replies {
+	display: flex;
+	gap: 8px;
+	max-width: 100%;
+	margin: 10px 0 14px;
+	padding: 2px 2px 6px;
+	overflow-x: auto;
+	overscroll-behavior-x: contain;
+	scrollbar-width: thin;
+}
+
+.tr-quick-reply {
+	flex: 0 0 auto;
+	min-width: 44px;
+	min-height: 44px;
+	padding: 8px 12px;
+	border: 1px solid var(--border);
+	border-radius: 999px;
+	background: var(--bg-raised);
+	color: var(--fg);
+	font: inherit;
+	font-size: 0.85rem;
+	white-space: nowrap;
+}
+
+.tr-quick-reply-generated {
+	border-style: dashed;
+	color: var(--fg-muted);
+}
+
+/* Phone Actions panel: suggestions are a full-width list, every one visible, read like sentences. */
+.cmp-action-quick-replies .tr-quick-replies {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	margin: 0;
+	padding: 0;
+	overflow: visible;
+}
+
+.cmp-action-quick-replies .tr-quick-reply-card {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) 44px;
+	align-items: stretch;
+	min-width: 0;
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	background: var(--bg-raised);
+}
+
+.cmp-action-quick-replies .tr-quick-reply {
+	display: flex;
+	min-width: 0;
+	min-height: 44px;
+	align-items: center;
+	padding: 9px 12px;
+	border: 0;
+	border-radius: var(--radius) 0 0 var(--radius);
+	background: transparent;
+	color: var(--fg);
+	font-size: 14px;
+	line-height: 1.35;
+	text-align: start;
+	white-space: normal;
+	overflow-wrap: anywhere;
+}
+
+.cmp-action-quick-replies .tr-quick-reply:active {
+	background: var(--hover);
+}
+
+.cmp-action-quick-replies .tr-quick-reply-edit {
+	display: grid;
+	min-width: 44px;
+	min-height: 44px;
+	place-items: center;
+	padding: 0;
+	border: 0;
+	border-inline-start: 1px solid var(--border);
+	border-radius: 0 var(--radius) var(--radius) 0;
+	background: transparent;
+	color: var(--fg-muted);
+}
+
+
+.sh-quick-replies-input {
+	width: 100%;
+	min-height: 132px;
+	padding: 10px 12px;
+	resize: vertical;
+	font: inherit;
+	line-height: 1.6;
+}
+
+.sh-quick-replies-save {
+	min-height: 44px;
+}
+
+.cmp-action-quick-replies .tr-quick-reply > span {
+	display: -webkit-box;
+	overflow: hidden;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 3;
+	line-clamp: 3;
+}

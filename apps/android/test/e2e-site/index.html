@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=auto">
+<title>omp console test site</title>
+<style>body{font:18px system-ui;margin:0;padding:16px;background:#fff;color:#111}button,input{font:inherit;margin:6px 0;padding:10px;display:block}#log{white-space:pre-wrap;font:14px monospace}</style>
+</head>
+<body>
+<h1 id="title">OMP-CONSOLE-TEST-SITE</h1>
+<p id="bridge"></p>
+<button id="notify">notify()</button>
+<button id="mic">getUserMedia(audio)</button>
+<input id="file" type="file">
+<a id="next" href="next.html" style="display:block;margin:12px 0;font-size:22px">internal link: next.html</a>
+<a id="ext" href="https://example.org/" style="display:block;margin:12px 0;font-size:22px">external link: example.org</a>
+<p id="log"></p>
+<script>
+const log = m => { console.log("[omp-console-test] " + m); document.getElementById("log").textContent += m + "\n"; };
+log("origin=" + location.origin + " OmpConsoleAndroid=" + (typeof window.OmpConsoleAndroid));
+document.getElementById("bridge").textContent = "OmpConsoleAndroid: " + (window.OmpConsoleAndroid ? "present v" + window.OmpConsoleAndroid.version : "missing");
+const send = () => log("notify() -> " + window.OmpConsoleAndroid?.notify("omp console: needs answer", "Session demo is waiting", "needs-answer-demo"));
+document.getElementById("notify").onclick = send;
+document.getElementById("mic").onclick = async () => {
+	try { const s = await navigator.mediaDevices.getUserMedia({ audio: true }); log("mic granted, tracks=" + s.getAudioTracks().length); s.getTracks().forEach(t => t.stop()); }
+	catch (e) { log("mic error: " + e.name); }
+};
+// The launcher strips query strings, so the /auto/ path (symlink to this directory) arms a delayed notify.
+if (location.pathname.startsWith("/auto")) setTimeout(send, 8000);
+</script>
+</body>
+</html>

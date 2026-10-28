@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>dev.ompconsole.daemon</string>
+	<key>ProgramArguments</key>
+	<array>
+@PROGRAM_ARGUMENTS@
+	</array>
+	<key>EnvironmentVariables</key>
+	<dict>
+		<key>PATH</key>
+		<string>@PATH@</string>
+		<key>OMP_CONSOLE_SUPERVISED</key>
+		<string>1</string>
+	</dict>
+	<key>WorkingDirectory</key>
+	<string>@REPO_ROOT@</string>
+	<key>RunAtLoad</key>
+	<true/>
+	<key>KeepAlive</key>
+	<true/>
+	<key>StandardOutPath</key>
+	<string>@LOG_DIR@/daemon.log</string>
+	<key>StandardErrorPath</key>
+	<string>@LOG_DIR@/daemon.log</string>
+</dict>
+</plist>

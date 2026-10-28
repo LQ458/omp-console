@@ -1,0 +1,22 @@
+{
+  "name": "omp-console-android",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "omp console Android shell: Capacitor WebView that hosts the daemon web UI over the tailnet. Not a Bun workspace member; npm + Gradle toolchain.",
+  "license": "MIT",
+  "scripts": {
+    "sync": "cap sync android",
+    "build": "scripts/build-apk.sh",
+    "test": "scripts/test.sh"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.5.3",
+    "@capacitor/core": "^8.5.3",
+    "@capacitor/local-notifications": "^8.0.0",
+    "@capacitor/preferences": "^8.0.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.5.3"
+  }
+}

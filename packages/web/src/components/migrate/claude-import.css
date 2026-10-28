@@ -1,0 +1,304 @@
+.dk-claude-import {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr);
+	gap: 14px;
+	min-width: 0;
+	color: var(--fg);
+}
+
+.dk-ci-intro,
+.dk-ci-note,
+.dk-ci-source-head p,
+.dk-ci-setup header p {
+	margin: 0;
+	color: var(--fg-muted);
+	font-size: 12px;
+	line-height: 1.45;
+	overflow-wrap: anywhere;
+}
+
+.dk-ci-source,
+.dk-ci-setup,
+.dk-ci-not-migrated {
+	display: grid;
+	gap: 10px;
+	min-width: 0;
+	padding: 12px;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-lg);
+	background: var(--bg-raised);
+}
+
+.dk-ci-source-head,
+.dk-ci-actions,
+.dk-ci-settings-footer {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 9px;
+	min-width: 0;
+}
+
+.dk-ci-source-head h2,
+.dk-ci-setup h2,
+.dk-ci-not-migrated h2 {
+	margin: 0;
+	font-size: 14px;
+}
+
+.dk-ci-source-head p {
+	margin-top: 3px;
+}
+
+.dk-ci-icon-button,
+.dk-ci-actions button,
+.dk-ci-session > button,
+.dk-ci-imported-result button {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 5px;
+	min-height: 31px;
+	padding: 0 9px;
+	border: 1px solid var(--border-strong);
+	border-radius: var(--radius);
+	color: var(--fg);
+	background: var(--bg-overlay);
+	font: 500 11px / 1.2 var(--font-mono);
+	cursor: pointer;
+}
+
+.dk-ci-icon-button {
+	width: 32px;
+	padding: 0;
+	flex: none;
+}
+
+.dk-ci-actions button.dk-ci-primary {
+	color: var(--fg-on-accent, #fff);
+	background: var(--accent);
+	border-color: var(--accent);
+}
+
+.dk-ci-icon-button:hover:not(:disabled),
+.dk-ci-actions button:hover:not(:disabled),
+.dk-ci-session > button:hover:not(:disabled),
+.dk-ci-imported-result button:hover:not(:disabled) {
+	filter: brightness(.96);
+}
+
+.dk-ci-icon-button:disabled,
+.dk-ci-actions button:disabled,
+.dk-ci-session > button:disabled,
+.dk-ci-imported-result button:disabled {
+	opacity: .48;
+	cursor: default;
+}
+
+.dk-ci-actions label,
+.dk-ci-toggle {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	min-width: 0;
+	color: var(--fg-muted);
+	font-size: 12px;
+}
+
+.dk-ci-project {
+	display: grid;
+	gap: 6px;
+	min-width: 0;
+}
+
+.dk-ci-project h3 {
+	margin: 5px 0 0;
+	color: var(--fg-muted);
+	font: 600 10px / 1.4 var(--font-mono);
+	overflow-wrap: anywhere;
+}
+
+.dk-ci-project ul,
+.dk-ci-results,
+.dk-ci-scope-list,
+.dk-ci-not-migrated ul {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+
+.dk-ci-project ul {
+	display: grid;
+	gap: 5px;
+}
+
+.dk-ci-session {
+	display: grid;
+	grid-template-columns: 18px minmax(0, 1fr) auto;
+	align-items: start;
+	gap: 8px;
+	padding: 9px;
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	background: var(--bg-inset);
+}
+
+.dk-ci-session > input,
+.dk-ci-actions input,
+.dk-ci-toggle input {
+	width: 16px;
+	height: 16px;
+	margin: 2px 0 0;
+	accent-color: var(--accent);
+}
+
+.dk-ci-session-copy {
+	min-width: 0;
+}
+
+.dk-ci-session-copy strong {
+	display: block;
+	font-size: 12px;
+	overflow-wrap: anywhere;
+}
+
+.dk-ci-session-copy p,
+.dk-ci-session-copy small {
+	display: block;
+	margin: 4px 0 0;
+	color: var(--fg-muted);
+	font-size: 11px;
+	line-height: 1.4;
+	overflow-wrap: anywhere;
+}
+
+.dk-ci-session-copy small {
+	font-size: 10px;
+}
+
+.dk-ci-progress {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr);
+	gap: 5px;
+	color: var(--fg-muted);
+	font-size: 11px;
+}
+
+.dk-ci-progress progress {
+	width: 100%;
+	accent-color: var(--accent);
+}
+
+.dk-ci-error,
+.dk-ci-note,
+.dk-ci-imported-result {
+	padding: 9px 10px;
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	background: var(--bg-inset);
+}
+
+.dk-ci-error {
+	display: flex;
+	align-items: flex-start;
+	gap: 7px;
+	color: var(--err);
+	border-color: color-mix(in srgb, var(--err) 35%, var(--border));
+	background: color-mix(in srgb, var(--err) 9%, var(--bg));
+	font-size: 12px;
+	line-height: 1.45;
+	overflow-wrap: anywhere;
+}
+
+.dk-ci-error svg {
+	flex: none;
+	margin-top: 1px;
+}
+
+.dk-ci-results {
+	display: grid;
+	gap: 5px;
+	color: var(--err);
+	font-size: 11px;
+	overflow-wrap: anywhere;
+}
+
+.dk-ci-imported-result {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	color: var(--fg-muted);
+	font-size: 11px;
+}
+
+.dk-ci-imported-result > svg {
+	flex: none;
+	color: var(--success, #23855a);
+}
+
+.dk-ci-imported-result span {
+	flex: 1;
+	min-width: 0;
+	overflow-wrap: anywhere;
+}
+
+.dk-ci-setup header p {
+	margin-top: 4px;
+}
+
+.dk-ci-scope-list,
+.dk-ci-not-migrated ul {
+	display: grid;
+	gap: 7px;
+	color: var(--fg-muted);
+	font-size: 11px;
+	line-height: 1.45;
+}
+
+.dk-ci-toggles {
+	display: grid;
+	gap: 9px;
+}
+
+.dk-ci-toggle {
+	align-items: flex-start;
+	color: var(--fg);
+}
+
+.dk-ci-toggle input {
+	flex: none;
+}
+
+.dk-ci-settings-footer {
+	justify-content: flex-start;
+	flex-wrap: wrap;
+}
+
+.dk-ci-settings-footer span {
+	color: var(--success, #23855a);
+	font-size: 11px;
+	line-height: 1.4;
+}
+
+.dk-ci-spin {
+	animation: dk-ci-spin 900ms linear infinite;
+}
+
+@keyframes dk-ci-spin { to { transform: rotate(360deg); } }
+
+@media (max-width: 480px) {
+	.dk-ci-source,
+	.dk-ci-setup,
+	.dk-ci-not-migrated {
+		padding: 10px;
+	}
+
+	.dk-ci-session {
+		grid-template-columns: 18px minmax(0, 1fr);
+	}
+
+	.dk-ci-session > button {
+		grid-column: 2;
+		justify-self: start;
+	}
+}

@@ -1,0 +1,57 @@
+name: CI
+
+# One Linux runner, about 10 minutes. The macOS job was dropped: its hosted runners are slow for the real-worker
+# timing tests and cost 10x minutes on private repositories. Run the full suites on a Mac before a release
+# (see CONTRIBUTING.md).
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    name: Checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.3
+
+      - name: Isolate omp state
+        run: |
+          echo "PI_CODING_AGENT_DIR=$(mktemp -d "$RUNNER_TEMP/pi-coding-agent.XXXXXX")" >> "$GITHUB_ENV"
+          echo "PI_CONFIG_DIR=$(mktemp -d "$RUNNER_TEMP/omp-console-test.XXXXXX")" >> "$GITHUB_ENV"
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Scan personal data
+        run: ./scripts/scan-personal.sh
+
+      - name: Typecheck
+        run: |
+          bun x tsgo --noEmit --strict --target ES2022 --module ESNext --moduleResolution bundler packages/protocol/src/index.ts
+          bun run check:types
+
+      - name: Web tests and build
+        run: cd packages/web && bun test && bun run build
+
+      # These suites start real worker processes with timing checks; hosted runners are slow, so run fewer at once.
+      - name: Daemon tests
+        run: cd packages/daemon && bun test --max-concurrency=2
+
+      - name: Session-host tests
+        run: cd packages/session-host && bun test --max-concurrency=1
+
+      - name: Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

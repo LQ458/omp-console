@@ -1,0 +1,477 @@
+/* Tiled panes (pn-*). Token vars only. Dockview draws the grid; its tab strip is never shown. */
+
+.pn-host {
+	flex: 1;
+	min-width: 0;
+	min-height: 0;
+	display: flex;
+	flex-direction: column;
+}
+
+.pn-stage {
+	position: relative;
+	flex: 1;
+	min-height: 0;
+	min-width: 0;
+}
+
+.pn-dock-wrap {
+	position: absolute;
+	inset: 0;
+}
+
+.pn-dock-loading {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	grid-template-rows: repeat(auto-fit, minmax(0, 1fr));
+	width: 100%;
+	height: 100%;
+}
+
+.pn-dock-box {
+	width: 100%;
+	height: 100%;
+	overflow: hidden;
+}
+
+/* ---- Dockview theme: transparent groups on the page background, hairline separators ---- */
+.pn-dock.dockview-theme-abyss {
+	height: 100%;
+	width: 100%;
+	--dv-group-view-background-color: transparent;
+	--dv-separator-border: var(--border);
+	--dv-sash-color: transparent;
+	--dv-active-sash-color: var(--accent);
+	--dv-active-sash-transition-delay: 0s;
+	--dv-paneview-active-outline-color: transparent;
+	--dv-tabs-and-actions-container-height: 0px;
+	--dv-drag-over-background-color: transparent;
+	background: var(--bg);
+}
+
+/* ---- one pane ---- */
+.pn-frame {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	width: 100%;
+	height: 100%;
+	min-width: 0;
+	min-height: 0;
+	overflow: clip;
+	background: var(--bg);
+	/* `size` (not just inline-size): the ask form caps its height at a share of the pane (`cqh`), not of the window. */
+	container-type: size;
+	container-name: pane;
+}
+
+.pn-content {
+	display: flex;
+	flex: 1;
+	flex-direction: column;
+	width: 100%;
+	height: 100%;
+	min-width: 0;
+	min-height: 0;
+	animation: pn-content-enter var(--dur-base, 200ms) var(--ease-out, ease-out) backwards;
+}
+
+.pn-content > .sh-app,
+.pn-content > .dk-empty-main {
+	flex: 1;
+	min-width: 0;
+	min-height: 0;
+	height: auto;
+}
+
+@keyframes pn-content-enter {
+	from {
+		opacity: 0;
+		transform: translateY(4px);
+	}
+	to {
+		opacity: 1;
+		transform: none;
+	}
+}
+
+/* Focus ring: workspace accent when one is set (spec 7), else the deck accent. Drawn over the content. */
+.pn-frame::after {
+	content: "";
+	position: absolute;
+	inset: 0;
+	z-index: 6;
+	pointer-events: none;
+	border: 1px solid transparent;
+	border-radius: 0;
+	transition: border-color 120ms var(--ease-out);
+}
+
+.pn-frame[data-multi="true"]::after {
+	border-color: var(--border);
+}
+
+.pn-frame[data-multi="true"][data-focused="true"]::after {
+	border-color: var(--ws-accent, var(--accent));
+	box-shadow: inset 0 2px 0 var(--ws-accent, var(--accent));
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.pn-content {
+		animation: none;
+	}
+}
+
+:root[data-motion="off"] .pn-content {
+	animation: none;
+}
+
+/* A pane that is not on screen (zoomed away): the transcript DOM is released, this stands in. */
+.pn-stub {
+	display: grid;
+	place-items: center;
+	flex: 1;
+	padding: 12px;
+	font-size: 12.5px;
+	color: var(--fg-faint);
+}
+
+.pn-note {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	padding: 24px;
+	text-align: center;
+	color: var(--fg-muted);
+}
+
+.pn-note-title {
+	margin: 0;
+	font-weight: 600;
+	color: var(--fg);
+}
+
+.pn-note-body {
+	margin: 0;
+	max-width: 36ch;
+	font-size: 12.5px;
+}
+
+.pn-note-actions {
+	display: flex;
+	gap: 8px;
+	margin-top: 4px;
+}
+
+/* Narrow pane headers keep all controls in HeaderBar's measured overflow menu; only connection text collapses. */
+.pn-frame:is([data-width="narrow"], [data-width="tiny"]) .sh-status {
+	width: 26px;
+	padding: 0;
+	justify-content: center;
+	font-size: 0;
+}
+
+.pn-frame:is([data-width="narrow"], [data-width="tiny"]) .sh-rail {
+	width: 240px;
+}
+
+.pn-frame:is([data-width="narrow"], [data-width="tiny"]) .sc-chip-text {
+	max-width: 120px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.pn-frame[data-width="tiny"] .sc-chip-text {
+	max-width: 64px;
+}
+
+
+.pn-frame[data-width="tiny"] .sh-header {
+	min-height: 44px;
+	padding: 4px 4px 4px 8px;
+	gap: 4px;
+}
+
+.pn-frame[data-width="tiny"] .sh-header-right {
+	gap: 2px;
+}
+
+.pn-frame[data-width="tiny"] .sh-header:not([data-mode="phone"]) .dk-tap {
+	width: 28px;
+	height: 28px;
+}
+
+
+/* One page at a time on a phone: there is nothing to tell the focused pane from. */
+.pn-phone .pn-frame::after {
+	display: none;
+}
+
+/* ---- pane bar ---- */
+.pn-bar {
+	flex: none;
+	display: flex;
+	align-items: center;
+	gap: 2px;
+	height: 28px;
+	padding: 0 8px;
+	border-bottom: 1px solid var(--border);
+	background: var(--bg);
+}
+
+.pn-bar-sep {
+	width: 1px;
+	height: 14px;
+	margin: 0 4px;
+	background: var(--border-strong);
+}
+
+.pn-bar-btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	height: 22px;
+	min-width: 24px;
+	padding: 0 6px;
+	justify-content: center;
+	font: 500 12px / 1 var(--font-ui);
+	color: var(--fg-muted);
+	background: transparent;
+	border: 0;
+	border-radius: var(--radius-sm);
+	cursor: pointer;
+}
+
+.pn-bar-btn:hover:not(:disabled) {
+	color: var(--fg);
+	background: var(--hover);
+}
+
+.pn-bar-btn[aria-pressed="true"] {
+	color: var(--accent);
+	background: var(--accent-muted);
+}
+
+.pn-bar-btn:disabled {
+	opacity: 0.4;
+	cursor: default;
+}
+
+.pn-bar-btn:focus-visible,
+.pn-menu-item:focus-visible,
+.pn-phone-tab-main:focus-visible {
+	outline: 2px solid var(--ring);
+	outline-offset: 1px;
+}
+
+.pn-bar-count {
+	margin-left: auto;
+	font: 400 11.5px / 1 var(--font-mono);
+	color: var(--fg-faint);
+}
+
+/* ---- layouts menu ---- */
+.pn-menu {
+	position: relative;
+}
+
+.pn-menu-panel {
+	position: absolute;
+	top: calc(100% + 4px);
+	left: 0;
+	z-index: 40;
+	width: 260px;
+	padding: 6px;
+	background: var(--bg-overlay);
+	border: 1px solid var(--border-strong);
+	border-radius: var(--radius-lg);
+	box-shadow: var(--shadow-overlay);
+}
+
+.pn-menu-empty {
+	margin: 4px 6px 8px;
+	font-size: 12.5px;
+	color: var(--fg-faint);
+}
+
+.pn-menu-row {
+	display: flex;
+	align-items: center;
+	gap: 2px;
+}
+
+.pn-menu-item {
+	flex: 1;
+	min-width: 0;
+	padding: 6px 8px;
+	overflow: hidden;
+	text-align: left;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	font: 400 13px / 1.2 var(--font-ui);
+	color: var(--fg);
+	background: transparent;
+	border: 0;
+	border-radius: var(--radius-sm);
+	cursor: pointer;
+}
+
+.pn-menu-item:hover {
+	background: var(--hover);
+}
+
+.pn-menu-delete {
+	display: inline-grid;
+	place-items: center;
+	width: 24px;
+	height: 24px;
+	color: var(--fg-faint);
+	background: transparent;
+	border: 0;
+	border-radius: var(--radius-sm);
+	cursor: pointer;
+}
+
+.pn-menu-delete:hover {
+	color: var(--err);
+	background: var(--hover);
+}
+
+.pn-menu-save {
+	display: flex;
+	gap: 6px;
+	margin-top: 6px;
+	padding-top: 6px;
+	border-top: 1px solid var(--border);
+}
+
+.pn-menu-save input {
+	flex: 1;
+	min-width: 0;
+	height: 28px;
+	padding: 0 8px;
+	font: 400 13px / 1 var(--font-ui);
+	color: var(--fg);
+	background: var(--bg-inset);
+	border: 1px solid var(--border-strong);
+	border-radius: var(--radius-sm);
+}
+
+.pn-menu-error {
+	margin: 6px 6px 2px;
+	font-size: 12px;
+	color: var(--err);
+}
+
+/* ---- phone: page switcher ---- */
+.pn-phone {
+	position: absolute;
+	inset: 0;
+	display: flex;
+	flex-direction: column;
+}
+
+.pn-phone-bar {
+	flex: none;
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	padding: 6px 8px;
+	overflow-x: auto;
+	border-bottom: 1px solid var(--border);
+	background: var(--bg);
+	scrollbar-width: none;
+}
+
+.pn-phone-tab {
+	flex: none;
+	display: inline-flex;
+	align-items: center;
+	max-width: 60vw;
+	height: 32px;
+	background: var(--bg-inset);
+	border: 1px solid var(--border-strong);
+	border-radius: 999px;
+}
+
+.pn-phone-tab[data-current="true"] {
+	border-color: var(--accent);
+	background: var(--accent-muted);
+}
+
+.pn-phone-tab-main {
+	min-width: 0;
+	height: 100%;
+	padding: 0 12px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	font: 500 13px / 1 var(--font-ui);
+	color: var(--fg);
+	background: transparent;
+	border: 0;
+	border-radius: 999px;
+}
+
+.pn-phone-tab-close,
+.pn-phone-add {
+	display: inline-grid;
+	place-items: center;
+	flex: none;
+	width: 28px;
+	height: 28px;
+	color: var(--fg-muted);
+	background: transparent;
+	border: 0;
+	border-radius: 50%;
+}
+
+.pn-phone-stage {
+	position: relative;
+	flex: 1;
+	min-height: 0;
+}
+@media (pointer: coarse) {
+	.pn-bar {
+		height: auto;
+		min-height: 36px;
+		flex-wrap: wrap;
+		padding-block: 4px;
+	}
+
+	.pn-phone-tab {
+		height: 36px;
+	}
+}
+
+/* Four or more panes side by side: the session title needs the room more than these, which stay one click away
+   (new agent: the agents sheet; settings: the sidebar and home; the model: the transcript's first line and a wider pane).
+   Not on a phone: its one pane is as narrow, but these live in its overflow menu, the only way to reach them. */
+
+.pn-frame[data-width="tiny"] .sh-header .sh-header-left {
+	min-width: 60px;
+	flex-shrink: 1;
+}
+
+.pn-frame[data-width="tiny"] .sh-header .sh-title {
+	min-width: 60px;
+}
+
+/* Essential right controls stay fixed; the session title takes the remaining width. */
+.pn-frame[data-width="tiny"] .sh-header .sh-header-right {
+	flex-shrink: 0;
+}
+
+@container pane (max-width: 180px) {
+	.sh-header:not([data-mode="phone"]) {
+		flex-wrap: wrap;
+		row-gap: 2px;
+	}
+	.sh-header .sh-header-right {
+		margin-left: auto;
+	}
+}

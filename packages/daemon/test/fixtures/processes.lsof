@@ -1,0 +1,13 @@
+p100
+fcwd
+n/tmp/project
+f4
+n/tmp/sessions/session-100.jsonl
+p101
+fcwd
+n/tmp/project
+f3
+n/tmp/sessions/session-100.jsonl
+p200
+fcwd
+n/tmp/broker

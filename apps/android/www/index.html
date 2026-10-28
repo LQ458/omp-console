@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>omp console</title>
+<link rel="stylesheet" href="launcher.css">
+</head>
+<body>
+<main>
+	<section class="card">
+		<h1>omp console</h1>
+		<div id="connecting" hidden>
+			<div class="spinner" role="status" aria-label="Connecting"></div>
+			<p>Connecting to <code id="host"></code></p>
+		</div>
+		<div id="setup" hidden>
+			<p>Enter the HTTPS URL of your omp-console daemon, for example <code>https://mac.tailnet-example.ts.net</code>.</p>
+			<form id="form" novalidate>
+				<label for="url">Daemon URL</label>
+				<input id="url" name="url" type="url" inputmode="url" autocomplete="url" autocapitalize="none" spellcheck="false" placeholder="https://mac.tailnet-example.ts.net">
+				<p id="error" class="error" role="alert"></p>
+				<button id="connect" type="submit">Connect</button>
+			</form>
+			<p class="muted">Change it later: long-press the top-left corner of the screen for one second, or long-press the app icon and choose “Change daemon URL”.</p>
+		</div>
+	</section>
+</main>
+<script type="module" src="launcher.js"></script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+diff --git a/src/compaction/compaction.ts b/src/compaction/compaction.ts
+index 02bd884..febffb3 100644
+--- a/src/compaction/compaction.ts
++++ b/src/compaction/compaction.ts
+@@ -2300,7 +2300,7 @@ async function generateTurnPrefixSummary(
+ 		preferredDialect(model.id),
+ 		resolveCatalogPolicy(model).classifierCotExtraction === true,
+ 	);
+-	const promptText = `<conversation>\n${conversationText}\n</conversation>\n\n${TURN_PREFIX_SUMMARIZATION_PROMPT}`;
++	const promptText = `<conversation>\n${conversationText}\n</conversation>\n\n${formatAdditionalContext(options?.extraContext)}${TURN_PREFIX_SUMMARIZATION_PROMPT}`;
+ 	const summarizationMessages = [
+ 		{
+ 			role: "user" as const,

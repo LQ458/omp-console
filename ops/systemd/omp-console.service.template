@@ -1,0 +1,23 @@
+[Unit]
+Description=omp-console daemon
+After=network-online.target
+Wants=network-online.target
+# A daemon that cannot start (e.g. a broken config.json, exit 2) stops retrying after 10 starts in 60 s;
+# fix the cause, then `systemctl --user restart omp-console`.
+StartLimitIntervalSec=60
+StartLimitBurst=10
+
+[Service]
+Type=simple
+WorkingDirectory=@WORKING_DIRECTORY@
+ExecStart=@EXEC_START@
+Restart=always
+RestartSec=3
+# `systemctl --user stop` sends SIGTERM; the daemon then exits 143, which is a clean stop.
+SuccessExitStatus=143
+Environment=OMP_CONSOLE_SUPERVISED=1
+Environment=PATH=@PATH@
+EnvironmentFile=-@ENV_FILE@
+
+[Install]
+WantedBy=default.target

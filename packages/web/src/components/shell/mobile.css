@@ -1,0 +1,1565 @@
+/* Mobile-first layer (dk-*): app frame, touch targets, sheets, needs-you bar, alerts, status/settings.
+ * Token vars only — no raw colors. Loaded after shell.css and switcher.css, so equal-specificity rules here win.
+ *
+ * Breakpoints mirror lib/layout.ts: phone < 760px, tablet 760-1099px, desktop >= 1100px.
+ * A touch device (any width) gets 44px targets; hover is never the only way to reach an action. */
+
+/* ---- app frame: sized to the visible area (lib/viewport.ts keeps these variables current) ---- */
+.dk-layout {
+	position: fixed;
+	left: 0;
+	right: 0;
+	top: var(--viewport-top, 0px);
+	height: var(--viewport-height, 100%);
+	overflow: hidden;
+	/* `hidden` still lets focus and scrollIntoView scroll the frame: a pane wider than the window after the window or a
+	 * panel shrank then shifted the whole app sideways, cutting off the session list. `clip` never scrolls. */
+	overflow: clip;
+}
+
+.dk-content {
+	position: relative;
+	flex: 1;
+	min-width: 0;
+	min-height: 0;
+	display: flex;
+	flex-direction: column;
+}
+
+.dk-content > .sh-app,
+.dk-content > .dk-empty-main {
+	flex: 1;
+	min-height: 0;
+	height: auto;
+}
+
+/* ---- touch target ---- */
+.dk-tap {
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	flex: none;
+	width: 32px;
+	height: 32px;
+	padding: 0;
+	color: var(--fg-muted);
+	background: transparent;
+	border: 1px solid transparent;
+	border-radius: var(--radius);
+	transition:
+		background 120ms ease-out,
+		color 120ms ease-out;
+}
+
+.dk-tap:hover {
+	color: var(--fg);
+	background: var(--hover);
+}
+
+.dk-tap-on {
+	color: var(--fg);
+	background: var(--selected);
+}
+
+.dk-wide-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	width: 100%;
+	min-height: 44px;
+	padding: 0 16px;
+	font-size: 14px;
+	font-weight: 550;
+	color: var(--fg);
+	background: var(--bg-overlay);
+	border: 1px solid var(--border-strong);
+	border-radius: var(--radius-lg);
+}
+
+.dk-wide-btn-primary {
+	color: var(--fg-inverse);
+	background: var(--fg);
+	border-color: transparent;
+}
+
+.dk-hint {
+	margin: 4px 0 0;
+	font-size: 13px;
+	line-height: 1.5;
+	color: var(--fg-muted);
+}
+
+/* ---- header ---- */
+.sh-header {
+	padding-left: calc(16px + env(safe-area-inset-left, 0px));
+	padding-right: calc(12px + env(safe-area-inset-right, 0px));
+}
+
+.dk-status-btn .dk-ind {
+	position: absolute;
+	top: 5px;
+	right: 5px;
+	width: 9px;
+	height: 9px;
+	border-radius: 50%;
+	background: var(--fg-faint);
+	box-shadow: 0 0 0 2px var(--bg);
+}
+
+.dk-status-btn .dk-ind-ok {
+	background: var(--ok);
+}
+
+.dk-status-btn .dk-ind-stalled {
+	background: var(--warn);
+}
+
+.dk-status-btn .dk-ind-offline {
+	background: var(--err);
+}
+
+.dk-ind-goal {
+	position: absolute;
+	bottom: 6px;
+	right: 6px;
+	width: 7px;
+	height: 7px;
+	border-radius: 50%;
+	background: var(--accent);
+	box-shadow: 0 0 0 2px var(--bg);
+}
+
+.dk-session-btn {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	flex: 1;
+	min-width: 0;
+	padding: 0 10px 0 12px;
+	text-align: left;
+	color: var(--fg);
+	background: var(--bg-raised);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-lg);
+	font-size: 15px;
+	font-weight: 550;
+}
+
+.dk-session-btn-title {
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.dk-session-btn-attention {
+	flex: none;
+	max-width: 140px;
+	overflow: hidden;
+	color: var(--warn);
+	font: 500 10px / 1.2 var(--font-mono);
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.dk-session-btn svg {
+	flex: none;
+	color: var(--fg-faint);
+}
+
+.dk-home-actions {
+	display: flex;
+	align-items: center;
+	gap: 2px;
+}
+
+/* ---- needs-you bar: above the header, so a pending answer is on screen in every layout ---- */
+.dk-needs {
+	position: relative;
+	z-index: 40;
+	flex: none;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	padding: 6px 8px;
+	padding-top: calc(6px + env(safe-area-inset-top, 0px));
+	padding-left: calc(8px + env(safe-area-inset-left, 0px));
+	padding-right: calc(8px + env(safe-area-inset-right, 0px));
+	background: var(--bg);
+	border-bottom: 1px solid var(--border);
+}
+
+.dk-needs-item {
+	width: 100%;
+}
+
+.dk-needs-item > .ui-request-inline {
+	max-width: 760px;
+	margin: 6px auto 4px;
+}
+
+/* The bar already clears the status bar; the header beneath it must not add the inset again. */
+.dk-needs ~ .sh-app .sh-header {
+	padding-top: 8px;
+}
+
+.dk-needs ~ .dk-empty-main .sh-connect {
+	padding-top: 12px;
+}
+
+.dk-needs-row {
+	max-width: 760px;
+	margin-inline: auto;
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	width: 100%;
+	min-height: 52px;
+	padding: 8px 8px 8px 14px;
+	text-align: left;
+	color: var(--fg);
+	background: color-mix(in srgb, var(--warn) 16%, var(--bg-raised));
+	border: 1px solid color-mix(in srgb, var(--warn) 45%, transparent);
+	border-radius: var(--radius-lg);
+	animation: rise 260ms var(--ease-out) backwards;
+}
+
+.dk-needs-row > svg {
+	flex: none;
+	color: var(--warn);
+}
+
+.dk-needs-copy {
+	flex: 1;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+}
+
+.dk-needs-title {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	font-size: 14px;
+	font-weight: 600;
+}
+
+.dk-needs-sub {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	font-size: 12.5px;
+	color: var(--fg-muted);
+}
+
+.dk-needs-go {
+	flex: none;
+	display: inline-flex;
+	align-items: center;
+	min-height: 36px;
+	padding: 0 14px;
+	font-size: 13px;
+	font-weight: 600;
+	color: var(--fg-inverse);
+	background: var(--warn);
+	border-radius: var(--radius);
+}
+
+.dk-needs-more {
+	width: 100%;
+	max-width: 760px;
+	margin-inline: auto;
+	padding: 0 4px 2px;
+	font-size: 12px;
+	color: var(--fg-muted);
+}
+
+/* ---- sheets ---- */
+.dk-sheet-root {
+	position: absolute;
+	inset: 0;
+	z-index: 80;
+}
+
+.dk-sheet-backdrop {
+	position: absolute;
+	inset: 0;
+	background: var(--backdrop);
+	animation: sh-fade-in var(--dur-fast, 120ms) var(--ease-out);
+}
+
+.dk-sheet {
+	position: absolute;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	display: flex;
+	flex-direction: column;
+	max-height: 100%;
+	background: var(--bg);
+	border: 1px solid var(--border-strong);
+	border-bottom: 0;
+	border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+	box-shadow: var(--shadow-overlay);
+	animation: dk-sheet-up var(--dur-base, 200ms) var(--ease-out) backwards;
+	transform: translate3d(0, var(--sheet-drag-y, 0px), 0);
+	transition: transform var(--dur-base, 200ms) var(--ease-spring, var(--ease-out));
+}
+
+.dk-sheet[data-size="full"] {
+	top: 0;
+	border: 0;
+	border-radius: 0;
+}
+
+.dk-sheet[data-size="tall"] {
+	top: calc(env(safe-area-inset-top, 0px) + 28px);
+}
+
+.dk-sheet-head {
+	flex: none;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 4px 4px 4px 16px;
+	border-bottom: 1px solid var(--border);
+	touch-action: none;
+	user-select: none;
+}
+
+.dk-sheet[data-size="full"] .dk-sheet-head {
+	padding-top: calc(4px + env(safe-area-inset-top, 0px));
+}
+
+.dk-sheet-title {
+	font-size: 16px;
+	font-weight: 600;
+	letter-spacing: -0.01em;
+}
+
+.dk-sheet-close {
+	width: 44px;
+	height: 44px;
+}
+
+.dk-sheet-body {
+	/* `auto` basis, not 0: WebKit resolves `height: fit-content` from the flex basis and collapsed the sheet to its header. */
+	flex: 1 1 auto;
+	min-height: 0;
+	overflow-y: auto;
+	overscroll-behavior: contain;
+	-webkit-overflow-scrolling: touch;
+	padding: 8px 16px;
+	padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+	padding-left: calc(16px + env(safe-area-inset-left, 0px));
+	padding-right: calc(16px + env(safe-area-inset-right, 0px));
+}
+
+@keyframes dk-sheet-up {
+	from {
+		opacity: 0;
+		transform: translateY(24px) scale(0.985);
+	}
+	to {
+		opacity: 1;
+		transform: none;
+	}
+}
+
+.dk-sheet[data-dragging="true"] {
+	transition: none;
+}
+
+.dk-sheet[data-exiting="true"] {
+	animation: dk-sheet-down var(--dur-base, 200ms) var(--ease-in-out) forwards;
+}
+
+.dk-sheet-root[data-exiting="true"] .dk-sheet-backdrop {
+	animation: sh-fade-out var(--dur-fast, 120ms) var(--ease-in-out) forwards;
+}
+
+.dk-sheet-root[data-exiting="true"] {
+	pointer-events: none;
+}
+
+@keyframes dk-sheet-down {
+	from {
+		opacity: 1;
+		transform: translate3d(0, var(--sheet-drag-y, 0px), 0) scale(1);
+	}
+	to {
+		opacity: 0;
+		transform: translate3d(0, 100%, 0) scale(0.985);
+	}
+}
+
+@keyframes sh-fade-out {
+	to {
+		opacity: 0;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.dk-sheet,
+	.dk-sheet-backdrop {
+		animation: none !important;
+		transition-duration: 0ms !important;
+	}
+}
+
+@media (min-width: 760px) {
+	.dk-sheet,
+	.dk-sheet[data-size="tall"],
+	.dk-sheet[data-size="full"] {
+		inset: 0;
+		width: min(560px, calc(100% - 32px));
+		height: fit-content;
+		max-height: min(720px, calc(100% - 48px));
+		margin: auto;
+		border: 1px solid var(--border-strong);
+		border-radius: var(--radius-xl);
+	}
+}
+
+/* ---- session sheet windows (desktop) ---- */
+.dk-sheet-head-actions {
+	flex: none;
+	display: flex;
+	align-items: center;
+	gap: 2px;
+}
+
+.dk-sheet-window-controls {
+	display: flex;
+	align-items: center;
+	gap: 2px;
+}
+
+.dk-sheet-window-control {
+	width: 36px;
+	height: 36px;
+}
+
+.dk-sheet-root[popover="manual"] {
+	position: fixed;
+	inset: 0;
+	z-index: 1000;
+	width: auto;
+	height: auto;
+	min-width: 0;
+	min-height: 0;
+	max-width: none;
+	max-height: none;
+	margin: 0;
+	padding: 0;
+	overflow: visible;
+	border: 0;
+	background: transparent;
+	color: inherit;
+	pointer-events: none;
+}
+
+.dk-sheet-root[popover="manual"]::backdrop {
+	background: transparent;
+	pointer-events: none;
+}
+
+.dk-sheet-root[popover="manual"][data-windowed="true"] .dk-sheet {
+	position: absolute;
+	inset: auto;
+	left: var(--sheet-window-live-x, var(--sheet-window-x));
+	top: var(--sheet-window-live-y, var(--sheet-window-y));
+	right: auto;
+	bottom: auto;
+	width: var(--sheet-window-live-width, var(--sheet-window-width));
+	height: var(--sheet-window-live-height, var(--sheet-window-height));
+	min-width: min(420px, calc(100vw - 32px));
+	min-height: min(300px, calc(100dvh - 32px));
+	max-width: none;
+	max-height: none;
+	margin: 0;
+	overflow: hidden;
+	border: 1px solid var(--border-strong);
+	border-radius: var(--radius-xl);
+	box-sizing: border-box;
+	pointer-events: auto;
+	transform: translate3d(var(--sheet-window-drag-x, 0px), var(--sheet-window-drag-y, 0px), 0);
+	transition:
+		transform var(--dur-base, 200ms) var(--ease-out, ease-out),
+		opacity var(--dur-base, 200ms) var(--ease-out, ease-out);
+	animation: dk-sheet-window-enter var(--dur-base, 200ms) var(--ease-out, ease-out) backwards;
+}
+
+.dk-sheet-root[popover="manual"][data-windowed="true"] .dk-sheet[data-window-interacted="true"] {
+	animation: none;
+}
+
+.dk-sheet-root[popover="manual"] .dk-sheet-head {
+	cursor: grab;
+}
+
+.dk-sheet-root[popover="manual"] .dk-sheet[data-dragging="true"] .dk-sheet-head {
+	cursor: grabbing;
+}
+
+.dk-sheet-root[popover="manual"] .dk-sheet[data-dragging="true"],
+.dk-sheet-root[popover="manual"] .dk-sheet[data-resizing="true"] {
+	transition: none;
+	animation: none;
+}
+
+.dk-sheet-resize-controls {
+	position: absolute;
+	inset: 0;
+	z-index: 3;
+	pointer-events: none;
+}
+
+.dk-sheet-resize-handle {
+	position: absolute;
+	display: block;
+	margin: 0;
+	padding: 0;
+	border: 0;
+	border-radius: 0;
+	background: transparent;
+	appearance: none;
+	pointer-events: auto;
+	touch-action: none;
+}
+
+.dk-sheet-resize-handle[data-edge="n"],
+.dk-sheet-resize-handle[data-edge="s"] {
+	right: 14px;
+	left: 14px;
+	height: 10px;
+	cursor: ns-resize;
+}
+
+.dk-sheet-resize-handle[data-edge="n"] {
+	top: -5px;
+}
+
+.dk-sheet-resize-handle[data-edge="s"] {
+	bottom: -5px;
+}
+
+.dk-sheet-resize-handle[data-edge="e"],
+.dk-sheet-resize-handle[data-edge="w"] {
+	top: 14px;
+	bottom: 14px;
+	width: 10px;
+	cursor: ew-resize;
+}
+
+.dk-sheet-resize-handle[data-edge="e"] {
+	right: -5px;
+}
+
+.dk-sheet-resize-handle[data-edge="w"] {
+	left: -5px;
+}
+
+.dk-sheet-resize-handle[data-edge="ne"],
+.dk-sheet-resize-handle[data-edge="nw"],
+.dk-sheet-resize-handle[data-edge="se"],
+.dk-sheet-resize-handle[data-edge="sw"] {
+	width: 16px;
+	height: 16px;
+}
+
+.dk-sheet-resize-handle[data-edge="ne"] {
+	top: -5px;
+	right: -5px;
+	cursor: nesw-resize;
+}
+
+.dk-sheet-resize-handle[data-edge="nw"] {
+	top: -5px;
+	left: -5px;
+	cursor: nwse-resize;
+}
+
+.dk-sheet-resize-handle[data-edge="se"] {
+	right: -5px;
+	bottom: -5px;
+	cursor: nwse-resize;
+}
+
+.dk-sheet-resize-handle[data-edge="sw"] {
+	bottom: -5px;
+	left: -5px;
+	cursor: nesw-resize;
+}
+
+@keyframes dk-sheet-window-enter {
+	from {
+		opacity: 0;
+		transform: translate3d(var(--sheet-window-drag-x, 0px), 8px, 0) scale(0.985);
+	}
+	to {
+		opacity: 1;
+		transform: translate3d(var(--sheet-window-drag-x, 0px), var(--sheet-window-drag-y, 0px), 0) scale(1);
+	}
+}
+
+.dk-sheet-root[popover="manual"] .dk-sheet[data-exiting="true"] {
+	animation: dk-sheet-window-exit var(--dur-base, 200ms) var(--ease-in-out) forwards;
+}
+
+@keyframes dk-sheet-window-exit {
+	to {
+		opacity: 0;
+		transform: translate3d(var(--sheet-window-drag-x, 0px), 8px, 0) scale(0.985);
+	}
+}
+
+.dk-sheet[data-motion="off"] {
+	animation: none !important;
+	transition: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.dk-sheet-root[popover="manual"] .dk-sheet {
+		animation: none !important;
+		transition: none !important;
+	}
+}
+
+.dk-section-title {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 8px;
+	margin: 16px 0 8px;
+	font-size: 11.5px;
+	font-weight: 600;
+	letter-spacing: 0.05em;
+	text-transform: uppercase;
+	color: var(--fg-muted);
+}
+
+.dk-section-meta {
+	font-weight: 500;
+	letter-spacing: 0;
+	text-transform: none;
+	font-variant-numeric: tabular-nums;
+	color: var(--fg-faint);
+}
+
+/* ---- settings ---- */
+.dk-settings-section {
+	display: flex;
+	flex-direction: column;
+}
+
+.dk-settings-section > .dk-section-title:first-child {
+	margin-top: 8px;
+}
+
+
+.dk-settings-status {
+	display: grid;
+	grid-template-columns: auto minmax(0, 1fr);
+	align-items: baseline;
+	gap: 8px;
+	margin: 8px 0 12px;
+	padding: 10px 12px;
+	color: var(--fg-muted);
+	background: var(--bg-raised);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-lg);
+	font-size: 12px;
+	line-height: 1.45;
+}
+
+.dk-settings-status strong {
+	color: var(--fg);
+	font-weight: 650;
+}
+
+.dk-settings-status span {
+	min-width: 0;
+	overflow-wrap: anywhere;
+}
+/* The notification box is pwa-owned and styles its buttons inline at 40px. */
+
+.dk-settings-appearance {
+	gap: 0;
+}
+
+.dk-appearance-subtitle {
+	margin: 14px 0 7px;
+	color: var(--fg-muted);
+	font-size: 11px;
+	font-weight: 600;
+}
+
+.dk-palette-grid {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 7px;
+}
+
+.dk-palette-choice {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto;
+	align-items: center;
+	gap: 6px 8px;
+	min-width: 0;
+	padding: 7px;
+	border: 1px solid var(--border-strong);
+	border-radius: var(--radius);
+	background: var(--bg-raised);
+	color: var(--fg);
+	font: inherit;
+	font-size: 11px;
+	text-align: left;
+	cursor: pointer;
+	transition: border-color var(--dur-fast, 120ms) var(--ease-out);
+}
+
+.dk-palette-choice[data-on="true"] {
+	border-color: var(--accent);
+	box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+.dk-palette-choice:focus-visible {
+	outline: 2px solid var(--ring);
+	outline-offset: 2px;
+}
+
+.dk-palette-choice > svg {
+	color: var(--accent);
+}
+
+.dk-palette-preview {
+	display: flex;
+	grid-column: 1 / -1;
+	height: 20px;
+	overflow: hidden;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-sm);
+}
+
+.dk-palette-swatch-bg {
+	flex: 1.2;
+	background: var(--bg);
+}
+
+.dk-palette-swatch-panel {
+	flex: 1;
+	background: var(--panel);
+}
+
+.dk-palette-swatch-accent {
+	flex: 0.8;
+	background: var(--accent);
+}
+
+.dk-palette-swatch-text {
+	flex: 0.8;
+	background: var(--fg-muted);
+}
+
+.dk-palette-label {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.dk-custom-accent {
+	display: grid;
+	grid-template-columns: 1fr auto auto;
+	align-items: center;
+	gap: 10px;
+	margin-top: 8px;
+	padding: 7px 9px;
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	background: var(--bg-raised);
+	color: var(--fg-muted);
+	font-size: 11px;
+}
+
+.dk-custom-accent input {
+	width: 38px;
+	height: 28px;
+	padding: 2px;
+	border: 1px solid var(--border-strong);
+	border-radius: var(--radius-sm);
+	background: var(--bg-inset);
+	cursor: pointer;
+}
+
+.dk-custom-accent output {
+	color: var(--fg);
+	font: 10px / 1 var(--font-mono);
+}
+
+.dk-motion-description {
+	margin: 6px 0 0;
+	color: var(--fg-muted);
+	font-size: 11px;
+}
+.dk-settings-notify button {
+	min-height: 44px !important;
+}
+
+.dk-segment {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	gap: 4px;
+	padding: 4px;
+	background: var(--bg-raised);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-lg);
+}
+
+.dk-segment-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 6px;
+	min-height: 44px;
+	font-size: 13.5px;
+	font-weight: 500;
+	color: var(--fg-muted);
+	background: transparent;
+	border: 0;
+	border-radius: var(--radius);
+}
+
+.dk-segment-btn[data-on="true"] {
+	color: var(--fg);
+	background: var(--selected);
+	box-shadow: inset 0 0 0 1px var(--border-strong);
+}
+
+/* ---- status sheet ---- */
+.dk-goal-card {
+	display: flex;
+	align-items: flex-start;
+	gap: 12px;
+	padding: 12px 14px;
+	background: var(--bg-raised);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-lg);
+}
+
+.dk-goal-card > svg {
+	flex: none;
+	margin-top: 2px;
+	color: var(--accent);
+}
+
+.dk-goal-card[data-status="complete"] > svg {
+	color: var(--ok);
+}
+
+.dk-goal-card[data-status="budget-limited"] > svg {
+	color: var(--warn);
+}
+
+.dk-goal-card[data-status="paused"] > svg,
+.dk-goal-card[data-status="dropped"] > svg {
+	color: var(--fg-faint);
+}
+
+.dk-goal-copy {
+	min-width: 0;
+}
+
+.dk-goal-objective {
+	font-size: 14.5px;
+	font-weight: 550;
+	line-height: 1.4;
+	overflow-wrap: anywhere;
+}
+
+.dk-goal-status {
+	margin-top: 2px;
+	font: 500 12px / 1.4 var(--font-mono);
+	color: var(--fg-muted);
+}
+
+.dk-progress {
+	height: 6px;
+	margin-bottom: 10px;
+	overflow: hidden;
+	background: var(--border-strong);
+	border-radius: 3px;
+}
+
+.dk-progress > span {
+	display: block;
+	height: 100%;
+	background: var(--accent-gradient);
+	border-radius: inherit;
+}
+
+.dk-todo-phase + .dk-todo-phase {
+	margin-top: 8px;
+}
+
+.dk-todo-phase-name {
+	padding: 4px 0;
+	font-size: 12.5px;
+	font-weight: 600;
+	color: var(--fg-muted);
+}
+
+.dk-todo-list {
+	list-style: none;
+	padding: 0;
+}
+
+.dk-todo-task {
+	display: flex;
+	align-items: flex-start;
+	gap: 10px;
+	min-height: 36px;
+	padding: 7px 0;
+	font-size: 14px;
+	line-height: 1.4;
+	border-top: 1px solid var(--border);
+	overflow-wrap: anywhere;
+}
+
+.dk-todo-task > svg {
+	flex: none;
+	margin-top: 1px;
+	color: var(--fg-faint);
+}
+
+.dk-todo-task[data-status="completed"] {
+	color: var(--fg-muted);
+}
+
+.dk-todo-task[data-status="completed"] > svg {
+	color: var(--ok);
+}
+
+.dk-todo-task[data-status="completed"] > span {
+	text-decoration: line-through;
+	text-decoration-color: var(--fg-faint);
+}
+
+.dk-todo-task[data-status="in_progress"] {
+	font-weight: 550;
+}
+
+.dk-todo-task[data-status="in_progress"] > svg {
+	color: var(--accent);
+}
+
+.dk-todo-task[data-status="abandoned"] {
+	color: var(--fg-faint);
+}
+
+.dk-health-list {
+	list-style: none;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.dk-health-card {
+	padding: 10px 12px;
+	background: var(--bg-raised);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-lg);
+}
+
+.dk-health-card[data-level="stalled"] {
+	border-color: color-mix(in srgb, var(--warn) 55%, transparent);
+}
+
+.dk-health-card[data-level="crashed"] {
+	border-color: color-mix(in srgb, var(--err) 55%, transparent);
+}
+
+.dk-health-card[data-current="true"] {
+	box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.dk-health-head {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	min-width: 0;
+}
+
+.dk-health-name {
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	font-size: 14px;
+	font-weight: 550;
+}
+
+.dk-health-here {
+	flex: none;
+	font-size: 11px;
+	color: var(--accent);
+}
+
+.dk-health-state {
+	flex: none;
+	padding: 2px 8px;
+	font: 500 11.5px / 1.4 var(--font-mono);
+	color: var(--fg-muted);
+	background: var(--bg-overlay);
+	border-radius: 999px;
+}
+
+.dk-health-state[data-level="stalled"] {
+	color: var(--warn);
+}
+
+.dk-health-state[data-level="crashed"] {
+	color: var(--err);
+}
+
+.dk-health-grid {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	gap: 8px;
+	margin-top: 8px;
+}
+
+.dk-health-grid dt {
+	font-size: 11px;
+	color: var(--fg-faint);
+}
+
+.dk-health-grid dd {
+	margin: 0;
+	font: 500 13px / 1.4 var(--font-mono);
+	font-variant-numeric: tabular-nums;
+}
+
+/* ---- alerts (background-session toasts) ---- */
+.dk-alerts {
+	position: fixed;
+	top: auto;
+	right: 16px;
+	bottom: 96px;
+	z-index: 70;
+	display: flex;
+	flex-direction: column;
+	align-items: flex-end;
+	gap: 8px;
+	width: min(440px, calc(100vw - 32px));
+	pointer-events: none;
+}
+
+.dk-alert {
+	display: flex;
+	align-items: center;
+	width: 100%;
+	max-width: 440px;
+	pointer-events: auto;
+	background: var(--glass);
+	backdrop-filter: blur(16px) saturate(160%);
+	-webkit-backdrop-filter: blur(16px) saturate(160%);
+	border: 1px solid var(--border-strong);
+	border-radius: var(--radius-lg);
+	box-shadow: var(--shadow-overlay);
+	animation: rise 300ms var(--ease-out) backwards;
+}
+
+.dk-alert-main {
+	flex: 1;
+	min-width: 0;
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	min-height: 52px;
+	padding: 8px 4px 8px 14px;
+	text-align: left;
+	color: var(--fg);
+	background: transparent;
+	border: 0;
+}
+
+.dk-alert[data-level="info"] .dk-alert-main > svg {
+	color: var(--ok);
+}
+
+.dk-alert[data-level="warning"] .dk-alert-main > svg {
+	color: var(--warn);
+}
+
+.dk-alert[data-level="error"] .dk-alert-main > svg {
+	color: var(--err);
+}
+
+.dk-alert-main > svg {
+	flex: none;
+}
+
+.dk-alert-copy {
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+}
+
+.dk-alert-title {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	font-size: 13.5px;
+	font-weight: 600;
+}
+
+.dk-alert-body {
+	max-width: 100%;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	font-size: 12.5px;
+	color: var(--fg-muted);
+}
+
+/* ---- home / daemon state ---- */
+.dk-home-card {
+	align-items: flex-start;
+}
+
+.dk-home-icon-err {
+	color: var(--err);
+}
+
+.dk-home-icon-warn {
+	color: var(--warn);
+}
+
+.dk-home-pulse {
+	width: 10px;
+	height: 10px;
+}
+
+.dk-home-skeleton {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	width: 100%;
+	margin-top: 4px;
+}
+
+.dk-home-skeleton span:nth-child(2) {
+	width: 82%;
+}
+
+.dk-home-skeleton span:nth-child(3) {
+	width: 64%;
+}
+
+/* ---- session sidebar inside the phone sheet ---- */
+.dk-sheet .dk-side {
+	position: static;
+	z-index: auto;
+	width: auto;
+	padding: 0;
+	border: 0;
+	box-shadow: none;
+	background: transparent;
+	gap: 6px;
+}
+
+.dk-sheet .dk-side-head {
+	justify-content: flex-end;
+	height: 44px;
+	padding: 0;
+}
+
+.dk-sheet .dk-side-title {
+	display: none;
+}
+
+.dk-sheet .dk-scroll {
+	overflow: visible;
+}
+
+/* Phone session rows: the title gets the full width (up to two lines); state, machine and age move under it; the
+ * summary follows directly. The 44 px touch rule made the title and summary two separate 44 px buttons with their text
+ * centred, which pulled one row apart into two. */
+.dk-sheet .dk-card-open {
+	gap: 3px;
+	padding: 10px 10px 2px;
+}
+
+.dk-sheet .dk-card-line-one {
+	flex-wrap: wrap;
+	column-gap: 8px;
+	row-gap: 3px;
+}
+
+.dk-sheet .dk-card-title {
+	order: 0;
+	flex: 1 1 100%;
+	align-items: flex-start;
+	gap: 6px;
+	white-space: normal;
+	font-size: 16px;
+	font-weight: 600;
+	line-height: 1.3;
+}
+
+.dk-sheet .dk-card-title > .ws-dot {
+	margin-top: 0.45em;
+}
+
+.dk-sheet .dk-card-title-text {
+	display: -webkit-box;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 2;
+	line-clamp: 2;
+	overflow-wrap: anywhere;
+}
+
+.dk-sheet .dk-card-line-one > :not(.dk-card-title) {
+	order: 1;
+}
+
+.dk-sheet .dk-card-status,
+.dk-sheet .dk-card-age,
+.dk-sheet .dk-card-model {
+	font-size: 12.5px;
+}
+
+.dk-sheet .dk-card-model {
+	max-width: 40%;
+}
+
+/* Block, not the button default inline-block: WebKit aligns an inline-block on the baseline of its unclamped last line,
+ * which left a long summary's row with a tall empty band. One class above the touch rule so `min-height` applies. */
+.dk-sheet .dk-card-row .dk-card-details {
+	display: block;
+	min-height: 0;
+	padding: 0 10px 10px;
+	font-size: 13px;
+}
+
+.dk-sheet .dk-card-detail-text {
+	display: -webkit-box;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 2;
+	line-clamp: 2;
+	white-space: normal;
+	line-height: 1.4;
+}
+
+.dk-sheet .dk-card-detail-text.is-expanded {
+	display: block;
+}
+
+.dk-act-label {
+	display: none;
+}
+
+.dk-turn-stop {
+	margin: 0 8px 4px;
+	width: calc(100% - 16px);
+}
+
+/* Row actions are always shown on touch and in the sheet: hover is not available there. */
+@media (hover: none), (max-width: 759.98px) {
+	.dk-actions {
+		position: static;
+		transform: none;
+		display: flex;
+		justify-content: flex-end;
+		gap: 8px;
+		padding: 0 8px 8px;
+		background: none;
+	}
+	.dk-item-wrap:hover .dk-marks {
+		visibility: visible;
+	}
+	/* A single action (resume rows: fork) sits at the row's right edge instead of taking a row of its own. */
+	.dk-actions-inline {
+		position: absolute;
+		top: 50%;
+		right: 4px;
+		transform: translateY(-50%);
+		padding: 0;
+	}
+	.dk-item-wrap:has(.dk-actions-inline) .dk-item {
+		padding-right: 60px;
+	}
+	.dk-act-label {
+		display: inline;
+	}
+	.dk-act,
+	.dk-act.sh-btn-icon {
+		width: auto;
+		min-width: 44px;
+		height: 44px;
+		padding: 0 14px;
+		gap: 6px;
+		font-size: 13px;
+		color: var(--fg-muted);
+		background: var(--bg-overlay);
+		border: 1px solid var(--border);
+	}
+	.dk-act-confirm,
+	.dk-act.sh-btn-stop {
+		color: var(--err);
+		background: color-mix(in srgb, var(--err) 12%, transparent);
+		border-color: color-mix(in srgb, var(--err) 30%, transparent);
+	}
+	.dk-item {
+		min-height: 56px;
+	}
+	.dk-item-title {
+		font-size: 15px;
+	}
+	.dk-item-sub {
+		font-size: 12.5px;
+	}
+	.dk-side-head .sh-btn-icon {
+		width: 44px;
+		height: 44px;
+	}
+}
+
+/* ---- touch sizing (any touch device, and every phone-width window) ---- */
+@media (pointer: coarse), (max-width: 759.98px) {
+	.dk-tap {
+		width: 44px;
+		height: 44px;
+	}
+	.sh-btn {
+		min-height: 44px;
+		height: auto;
+		padding: 0 14px;
+	}
+	.sh-btn-icon {
+		min-width: 44px;
+		padding: 0;
+	}
+	.sh-composer-actions .sh-btn {
+		width: auto;
+		min-width: 44px;
+		height: 44px;
+		padding: 0 12px;
+	}
+	.sh-composer .sh-btn-stop .sh-btn-label {
+		display: inline;
+	}
+	.sh-input {
+		height: 44px;
+		font-size: 16px;
+	}
+	.sh-composer-input {
+		min-height: 44px;
+		padding: 12px 0;
+	}
+}
+
+/* ---- ask form: question and options scroll, Cancel/Stop stay put ---- */
+.sh-composer-ask {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	/* In a tiled pane the window can be much taller than the pane; `cqh` is the pane's height there (and the small
+	   viewport height outside panes), so the options scroll and Cancel stays visible either way. */
+	max-height: min(calc(var(--viewport-height, 100dvh) * 0.62), 62cqh);
+}
+
+.sh-ask-scroll {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	flex: 1;
+	min-height: 0;
+	overflow-y: auto;
+	overscroll-behavior: contain;
+}
+
+.sh-ask-help {
+	font-size: 12.5px;
+	line-height: 1.4;
+	color: var(--fg-muted);
+}
+
+@media (pointer: coarse), (max-width: 759.98px) {
+	.sh-ask-option {
+		min-height: 52px;
+		align-items: center;
+		padding: 12px 14px;
+	}
+	.sh-ask-option-marker {
+		flex: none;
+		width: 22px;
+		font-size: 16px;
+		text-align: center;
+	}
+	.sh-ask-option-label {
+		font-size: 16px;
+	}
+	.sh-ask-option-description {
+		font-size: 13.5px;
+	}
+	.sh-ask-actions {
+		flex: none;
+		gap: 8px;
+		padding-top: 4px;
+	}
+	.sh-ask-actions .sh-btn {
+		flex: 1;
+		width: auto;
+		min-width: 0;
+	}
+	.sh-composer-ask .sh-composer-inner .sh-composer-actions .sh-btn {
+		width: 100%;
+	}
+}
+
+/* ---- tablet: two panes, chips thinned out ---- */
+@media (max-width: 1099.98px) {
+	.sh-cwd,
+	.sh-chip-meta,
+	.sh-avatars,
+	.sh-gauge-track,
+	.sh-brand,
+	.sh-brand-slash,
+	.dk-chip-label {
+		display: none;
+	}
+	.sh-status {
+		width: 26px;
+		padding: 0;
+		justify-content: center;
+		font-size: 0;
+	}
+	.dk-health,
+	.dk-goal {
+		padding: 0 7px;
+	}
+	.dk-side {
+		width: 248px;
+	}
+}
+
+/* ---- phone: one column, full-bleed panel, safe areas ---- */
+@media (max-width: 759.98px) {
+	.sh-header {
+		min-height: 56px;
+		padding: 6px 4px 6px 8px;
+		padding-top: calc(6px + env(safe-area-inset-top, 0px));
+		padding-left: calc(8px + env(safe-area-inset-left, 0px));
+		padding-right: calc(4px + env(safe-area-inset-right, 0px));
+		gap: 4px;
+	}
+	.sh-header-left {
+		flex: 1;
+		min-width: 0;
+	}
+	.sh-header-right {
+		gap: 0;
+	}
+	.sh-main {
+		padding: 0;
+	}
+	.sh-panel {
+		border-left: 0;
+		border-right: 0;
+		border-bottom: 0;
+		border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+	}
+	.sh-composer {
+		padding: 4px 8px 0;
+		padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+		padding-left: calc(8px + env(safe-area-inset-left, 0px));
+		padding-right: calc(8px + env(safe-area-inset-right, 0px));
+	}
+	.sh-composer-ask {
+		padding-top: 12px;
+	}
+	.sh-toasts {
+		right: calc(8px + env(safe-area-inset-right, 0px));
+		width: min(340px, calc(100% - 16px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)));
+	}
+	.dk-alerts {
+		right: calc(8px + env(safe-area-inset-right, 0px));
+		width: calc(100vw - 16px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px));
+	}
+	.sh-banner {
+		top: calc(var(--topbar-h) + env(safe-area-inset-top, 0px) + 10px);
+	}
+	.sh-recovery-banner,
+	.dk-global-notices {
+		top: calc(var(--topbar-h) + env(safe-area-inset-top, 0px) + 10px);
+	}
+	.sh-connect {
+		padding-left: calc(8px + env(safe-area-inset-left, 0px));
+		padding-right: calc(8px + env(safe-area-inset-right, 0px));
+	}
+	.sh-connect-card {
+		padding: 22px 18px;
+		margin-bottom: 4vh;
+	}
+}
+
+/* The keyboard covers the home-indicator area, so the bottom inset no longer applies. */
+html[data-keyboard="open"] .sh-composer {
+	padding-bottom: 8px;
+}
+
+html[data-keyboard="open"] .sh-toasts {
+	display: none;
+}
+
+/* Toasts yield their space while the answer controls are active. */
+.sh-app:has(.sh-composer-ask) .sh-toasts,
+.dk-layout:has(.sh-composer-ask) .dk-alerts,
+html[data-keyboard="open"] .dk-alerts {
+	display: none;
+}
+
+@media (max-width: 359.98px) {
+	.sh-header {
+		padding-left: calc(4px + env(safe-area-inset-left, 0px));
+	}
+	.dk-session-btn {
+		padding: 0 6px 0 8px;
+		gap: 6px;
+	}
+	.dk-health-grid {
+		grid-template-columns: repeat(2, 1fr);
+	}
+}
+
+.dk-sheet:focus,
+.dk-sheet:focus-visible {
+	outline: none;
+}
+
+/* The home screen has no header, so its brand stays at every width. */
+.sh-connect-top .sh-brand {
+	display: inline-flex;
+}
+
+/* Touch: 44 px targets (Apple HIG, the repo's phone convention). */
+@media (pointer: coarse), (max-width: 1099.98px) {
+	:is(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="option"]) {
+		min-width: 44px;
+		min-height: 44px;
+	}
+
+	a[href] {
+		display: inline-block;
+		max-width: 100%;
+		overflow-wrap: anywhere;
+		vertical-align: middle;
+	}
+}

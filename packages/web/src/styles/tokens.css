@@ -1,0 +1,522 @@
+/* Design tokens — pure-black chassis, one inset panel, alpha hairlines, and
+ * one omp accent gradient (cyan → pink). Dark is the default;
+ * `[data-theme="light"]` and the prefers-color-scheme fallback flip to light.
+ * The ONLY file allowed to contain raw color values. */
+/* The omp console dark set also applies to a Settings preview card (`data-palette="deck" data-theme="dark"`) inside another palette. */
+:root,
+[data-palette="deck"][data-theme="dark"] {
+	color-scheme: dark;
+
+	/* surface ramp: page → inset panel → card → raised */
+	--bg: #000;
+	--panel: #09090a;
+	--bg-raised: #0e0e10;
+	--bg-inset: #060607;
+	--bg-overlay: #17171a;
+	--glass: rgba(14, 14, 16, 0.78);
+	--hover: rgba(255, 255, 255, 0.035);
+	--selected: rgba(255, 255, 255, 0.075);
+
+	/* text */
+	--fg: #ededef;
+	--fg-muted: #a0a0a8;
+	--fg-faint: #6c6c74;
+	--fg-inverse: #0a0a0b;
+	--accent-custom-h: 337;
+	--accent-custom-c: 0.2;
+	--history-hue-saturation: 70%;
+	--history-hue-lightness: 62%;
+
+	/* accent: omp cyan → pink; solid pink for text and strokes */
+	--accent-a: #5ad8e6;
+	--accent-b: #ed4abf;
+	--accent: #f068c8;
+	--accent-fg: #0a0a0b;
+	--accent-muted: rgba(237, 74, 191, 0.14);
+	--accent-gradient: linear-gradient(100deg, var(--accent-a), var(--accent-b));
+	--ambient-a: rgba(90, 216, 230, 0.07);
+	--ambient-b: rgba(237, 74, 191, 0.06);
+
+	/* omp mark gradient stops (magenta → iris → cyan) */
+	--mark-a: oklch(0.7 0.24 340);
+	--mark-b: oklch(0.62 0.21 295);
+	--mark-c: oklch(0.81 0.14 200);
+
+	/* status; green `--live` is reserved for real-time presence */
+	--ok: #3ecf8e;
+	--live: #3ecf8e;
+	--warn: #f5a524;
+	--err: #ff6166;
+	/* Chart and figure series (`var(--c1)`…`--c6` in agent SVG, see transcript/figures.ts). */
+	--fig-c1: #5ad8e6;
+	--fig-c2: #f068c8;
+	--fig-c3: #3ecf8e;
+	--fig-c4: #f5a524;
+	--fig-c5: #a78bfa;
+	--fig-c6: #ff7b72;
+
+	/* hairlines: alpha so one value reads on every surface step */
+	--border: rgba(255, 255, 255, 0.07);
+	--border-strong: rgba(255, 255, 255, 0.13);
+	--edge-top: rgba(255, 255, 255, 0.14);
+	--edge-bottom: rgba(255, 255, 255, 0.05);
+	--ring: #5ad8e6;
+	--ring-soft: rgba(90, 216, 230, 0.18);
+	--shadow-float: 0 8px 24px rgba(0, 0, 0, 0.28);
+
+	/* type — system stacks only */
+	--font-ui: "Inter var", "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+	--font-mono: ui-monospace, "SF Mono", "JetBrains Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+
+	/* radii by role: chip · control · card · panel */
+	--radius-sm: 6px;
+	--radius: 8px;
+	--radius-lg: 12px;
+	--radius-xl: 16px;
+
+	--topbar-h: 52px;
+	--ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+	--dur-fast: 120ms;
+	--dur-base: 200ms;
+	--dur-slow: 320ms;
+	--ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+	--ease-spring: var(--ease-out);
+
+	--shadow-card: 0 1px 2px rgba(0, 0, 0, 0.5);
+	--shadow-overlay: 0 24px 64px rgba(0, 0, 0, 0.7), 0 1px 0 rgba(255, 255, 255, 0.06) inset;
+	--rail-mobile-shadow: -12px 0 32px rgba(0, 0, 0, 0.6);
+	--backdrop: rgba(0, 0, 0, 0.55);
+}
+
+:root[data-motion="lively"] {
+	--ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+:root[data-motion="off"] {
+	--dur-fast: 0ms;
+	--dur-base: 0ms;
+	--dur-slow: 0ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	:root,
+	:root[data-motion] {
+		--dur-fast: 0ms;
+		--dur-base: 0ms;
+		--dur-slow: 0ms;
+	}
+}
+
+/* Light theme — explicit override (toggle writes data-theme="light"). */
+[data-theme="light"] {
+	color-scheme: light;
+
+	--bg: #f2f2f3;
+	--panel: #fff;
+	--bg-raised: #fff;
+	--bg-inset: #f6f6f7;
+	--bg-overlay: #fff;
+	--glass: rgba(255, 255, 255, 0.82);
+	--hover: rgba(0, 0, 0, 0.03);
+	--selected: rgba(0, 0, 0, 0.06);
+
+	--fg: #151518;
+	--fg-muted: #5a5a63;
+	--fg-faint: #8b8b94;
+	--fg-inverse: #fff;
+	--history-hue-saturation: 70%;
+	--history-hue-lightness: 43%;
+
+	--accent-a: #1fa9bb;
+	--accent-b: #d42ea3;
+	--accent: #d42ea3;
+	--accent-fg: #000;
+	--accent-muted: rgba(212, 46, 163, 0.1);
+	--ambient-a: rgba(31, 169, 187, 0.06);
+	--ambient-b: rgba(212, 46, 163, 0.05);
+
+	--ok: #12a36b;
+	--live: #12a36b;
+	--warn: #c77c02;
+	--err: #dc3a40;
+	--fig-c1: #0e8fa3;
+	--fig-c2: #c8389c;
+	--fig-c3: #1f9d63;
+	--fig-c4: #c77c02;
+	--fig-c5: #7c5cd6;
+	--fig-c6: #d6453d;
+
+	--border: rgba(0, 0, 0, 0.08);
+	--border-strong: rgba(0, 0, 0, 0.14);
+	--edge-top: rgba(0, 0, 0, 0.1);
+	--edge-bottom: rgba(0, 0, 0, 0.06);
+	--ring: #1fa9bb;
+	--ring-soft: rgba(31, 169, 187, 0.16);
+
+	--shadow-card: 0 1px 2px rgba(0, 0, 0, 0.04);
+	--shadow-float: 0 8px 24px rgba(0, 0, 0, 0.12);
+	--shadow-overlay: 0 24px 64px rgba(0, 0, 0, 0.16);
+	--rail-mobile-shadow: -12px 0 32px rgba(0, 0, 0, 0.12);
+	--backdrop: rgba(0, 0, 0, 0.25);
+}
+
+/* Light theme — system fallback when no explicit preference is stored. */
+@media (prefers-color-scheme: light) {
+	:root:not([data-theme]) {
+		color-scheme: light;
+
+		--bg: #f2f2f3;
+		--panel: #fff;
+		--bg-raised: #fff;
+		--bg-inset: #f6f6f7;
+		--bg-overlay: #fff;
+		--glass: rgba(255, 255, 255, 0.82);
+		--hover: rgba(0, 0, 0, 0.03);
+		--selected: rgba(0, 0, 0, 0.06);
+
+		--fg: #151518;
+		--fg-muted: #5a5a63;
+		--fg-faint: #8b8b94;
+		--fg-inverse: #fff;
+		--history-hue-saturation: 70%;
+		--history-hue-lightness: 43%;
+
+		--accent-a: #1fa9bb;
+		--accent-b: #d42ea3;
+		--accent: #d42ea3;
+		--accent-fg: #000;
+		--accent-muted: rgba(212, 46, 163, 0.1);
+		--ambient-a: rgba(31, 169, 187, 0.06);
+		--ambient-b: rgba(212, 46, 163, 0.05);
+
+		--ok: #12a36b;
+		--live: #12a36b;
+		--warn: #c77c02;
+		--err: #dc3a40;
+		--fig-c1: #0e8fa3;
+		--fig-c2: #c8389c;
+		--fig-c3: #1f9d63;
+		--fig-c4: #c77c02;
+		--fig-c5: #7c5cd6;
+		--fig-c6: #d6453d;
+
+		--border: rgba(0, 0, 0, 0.08);
+		--border-strong: rgba(0, 0, 0, 0.14);
+		--edge-top: rgba(0, 0, 0, 0.1);
+		--edge-bottom: rgba(0, 0, 0, 0.06);
+		--ring: #1fa9bb;
+		--ring-soft: rgba(31, 169, 187, 0.16);
+
+		--shadow-card: 0 1px 2px rgba(0, 0, 0, 0.04);
+		--shadow-float: 0 8px 24px rgba(0, 0, 0, 0.12);
+		--shadow-overlay: 0 24px 64px rgba(0, 0, 0, 0.16);
+		--rail-mobile-shadow: -12px 0 32px rgba(0, 0, 0, 0.12);
+		--backdrop: rgba(0, 0, 0, 0.25);
+	}
+}
+
+/* Graphite — low-chroma charcoal with neutral silver accents. */
+[data-palette="graphite"][data-theme="dark"] {
+	--bg: #101113;
+	--panel: #17191c;
+	--bg-raised: #1e2125;
+	--bg-inset: #0c0d0f;
+	--bg-overlay: #26292e;
+	--glass: rgba(20, 22, 25, 0.88);
+	--hover: rgba(255, 255, 255, 0.045);
+	--selected: rgba(255, 255, 255, 0.09);
+	--fg: #f1f2f3;
+	--fg-muted: #b2b5b9;
+	--fg-faint: #969ba0;
+	--fg-inverse: #101113;
+	--accent-a: #d7dade;
+	--accent-b: #93999f;
+	--accent: #c2c7cc;
+	--accent-fg: #101113;
+	--accent-muted: rgba(194, 199, 204, 0.15);
+	--ambient-a: rgba(215, 218, 222, 0.045);
+	--ambient-b: rgba(147, 153, 159, 0.035);
+	--ring: #d7dade;
+	--ring-soft: rgba(215, 218, 222, 0.2);
+}
+
+[data-palette="graphite"][data-theme="light"] {
+	--bg: #f1f2f3;
+	--panel: #fff;
+	--bg-raised: #fff;
+	--bg-inset: #e8eaec;
+	--bg-overlay: #fff;
+	--glass: rgba(255, 255, 255, 0.88);
+	--hover: rgba(0, 0, 0, 0.035);
+	--selected: rgba(0, 0, 0, 0.075);
+	--fg: #17191c;
+	--fg-muted: #4e5358;
+	--fg-faint: #686e74;
+	--fg-inverse: #fff;
+	--accent-a: #505860;
+	--accent-b: #353c43;
+	--accent: #505860;
+	--accent-fg: #fff;
+	--accent-muted: rgba(80, 88, 96, 0.12);
+	--ambient-a: rgba(80, 88, 96, 0.045);
+	--ambient-b: rgba(53, 60, 67, 0.035);
+	--ring: #353c43;
+	--ring-soft: rgba(53, 60, 67, 0.18);
+}
+
+/* Ocean — deep marine surfaces in dark mode, cool mist in light mode. */
+[data-palette="ocean"][data-theme="dark"] {
+	--bg: #07131e;
+	--panel: #0b1d2d;
+	--bg-raised: #102638;
+	--bg-inset: #06101a;
+	--bg-overlay: #19354b;
+	--glass: rgba(11, 29, 45, 0.9);
+	--hover: rgba(183, 220, 245, 0.05);
+	--selected: rgba(183, 220, 245, 0.1);
+	--fg: #edf6fc;
+	--fg-muted: #adc3d2;
+	--fg-faint: #8ca5b5;
+	--fg-inverse: #07131e;
+	--accent-a: #72c9f1;
+	--accent-b: #398bb8;
+	--accent: #62b8e7;
+	--accent-fg: #07131e;
+	--accent-muted: rgba(98, 184, 231, 0.17);
+	--ambient-a: rgba(114, 201, 241, 0.07);
+	--ambient-b: rgba(57, 139, 184, 0.05);
+	--ring: #72c9f1;
+	--ring-soft: rgba(114, 201, 241, 0.2);
+}
+
+[data-palette="ocean"][data-theme="light"] {
+	--bg: #eef6fb;
+	--panel: #fff;
+	--bg-raised: #fff;
+	--bg-inset: #e2eef5;
+	--bg-overlay: #fff;
+	--glass: rgba(255, 255, 255, 0.88);
+	--hover: rgba(8, 67, 102, 0.04);
+	--selected: rgba(8, 67, 102, 0.08);
+	--fg: #102638;
+	--fg-muted: #435f72;
+	--fg-faint: #627e90;
+	--fg-inverse: #fff;
+	--accent-a: #0b6d9b;
+	--accent-b: #07547c;
+	--accent: #0b6d9b;
+	--accent-fg: #fff;
+	--accent-muted: rgba(11, 109, 155, 0.12);
+	--ambient-a: rgba(11, 109, 155, 0.045);
+	--ambient-b: rgba(7, 84, 124, 0.035);
+	--ring: #07547c;
+	--ring-soft: rgba(7, 84, 124, 0.18);
+}
+
+/* Forest — quiet green-black and leaf accents; pale sage in light mode. */
+[data-palette="forest"][data-theme="dark"] {
+	--bg: #0c1711;
+	--panel: #112219;
+	--bg-raised: #172b20;
+	--bg-inset: #08120c;
+	--bg-overlay: #1d3527;
+	--glass: rgba(17, 34, 25, 0.9);
+	--hover: rgba(194, 231, 203, 0.045);
+	--selected: rgba(194, 231, 203, 0.09);
+	--fg: #edf7ef;
+	--fg-muted: #b4c9b9;
+	--fg-faint: #92aa99;
+	--fg-inverse: #0c1711;
+	--accent-a: #72d6a0;
+	--accent-b: #3d9a68;
+	--accent: #70d39b;
+	--accent-fg: #0c1711;
+	--accent-muted: rgba(112, 211, 155, 0.16);
+	--ambient-a: rgba(114, 214, 160, 0.06);
+	--ambient-b: rgba(61, 154, 104, 0.045);
+	--ring: #72d6a0;
+	--ring-soft: rgba(114, 214, 160, 0.2);
+}
+
+[data-palette="forest"][data-theme="light"] {
+	--bg: #f0f7f1;
+	--panel: #fff;
+	--bg-raised: #fff;
+	--bg-inset: #e4efe6;
+	--bg-overlay: #fff;
+	--glass: rgba(255, 255, 255, 0.88);
+	--hover: rgba(24, 75, 45, 0.04);
+	--selected: rgba(24, 75, 45, 0.08);
+	--fg: #17291d;
+	--fg-muted: #4b6351;
+	--fg-faint: #667e6c;
+	--fg-inverse: #fff;
+	--accent-a: #176a43;
+	--accent-b: #105536;
+	--accent: #176a43;
+	--accent-fg: #fff;
+	--accent-muted: rgba(23, 106, 67, 0.12);
+	--ambient-a: rgba(23, 106, 67, 0.045);
+	--ambient-b: rgba(16, 85, 54, 0.035);
+	--ring: #105536;
+	--ring-soft: rgba(16, 85, 54, 0.18);
+}
+
+/* Sepia — warm ink and paper, with amber accents. */
+[data-palette="sepia"][data-theme="dark"] {
+	--bg: #1b1510;
+	--panel: #241b14;
+	--bg-raised: #2e231a;
+	--bg-inset: #17110d;
+	--bg-overlay: #392a1e;
+	--glass: rgba(36, 27, 20, 0.9);
+	--hover: rgba(244, 225, 197, 0.05);
+	--selected: rgba(244, 225, 197, 0.095);
+	--fg: #f5ead9;
+	--fg-muted: #c9b59d;
+	--fg-faint: #a99178;
+	--fg-inverse: #1b1510;
+	--accent-a: #e8bd82;
+	--accent-b: #bd8050;
+	--accent: #e2b274;
+	--accent-fg: #1b1510;
+	--accent-muted: rgba(226, 178, 116, 0.16);
+	--ambient-a: rgba(232, 189, 130, 0.06);
+	--ambient-b: rgba(189, 128, 80, 0.045);
+	--ring: #e8bd82;
+	--ring-soft: rgba(232, 189, 130, 0.2);
+}
+
+[data-palette="sepia"][data-theme="light"] {
+	--bg: #f4eee3;
+	--panel: #fffaf0;
+	--bg-raised: #fffaf0;
+	--bg-inset: #ebe2d3;
+	--bg-overlay: #fffaf0;
+	--glass: rgba(255, 250, 240, 0.9);
+	--hover: rgba(79, 56, 31, 0.04);
+	--selected: rgba(79, 56, 31, 0.08);
+	--fg: #30251a;
+	--fg-muted: #63503c;
+	--fg-faint: #78644e;
+	--fg-inverse: #fffaf0;
+	--accent-a: #89501f;
+	--accent-b: #684018;
+	--accent: #89501f;
+	--accent-fg: #fffaf0;
+	--accent-muted: rgba(137, 80, 31, 0.12);
+	--ambient-a: rgba(137, 80, 31, 0.045);
+	--ambient-b: rgba(104, 64, 24, 0.035);
+	--ring: #684018;
+	--ring-soft: rgba(104, 64, 24, 0.18);
+}
+
+/* High contrast — strict black/white surfaces and saturated, legible accents. */
+[data-palette="contrast"][data-theme="dark"] {
+	--bg: #000;
+	--panel: #000;
+	--bg-raised: #111;
+	--bg-inset: #000;
+	--bg-overlay: #111;
+	--glass: rgba(0, 0, 0, 0.96);
+	--hover: rgba(255, 255, 255, 0.12);
+	--selected: rgba(255, 255, 255, 0.2);
+	--fg: #fff;
+	--fg-muted: #f0f0f0;
+	--fg-faint: #d4d4d4;
+	--fg-inverse: #000;
+	--accent-a: #ffff00;
+	--accent-b: #ffff00;
+	--accent: #ffff00;
+	--accent-fg: #000;
+	--accent-muted: rgba(255, 255, 0, 0.24);
+	--ambient-a: rgba(255, 255, 0, 0.08);
+	--ambient-b: rgba(255, 255, 0, 0.06);
+	--ok: #00ff80;
+	--live: #00ff80;
+	--warn: #ffff00;
+	--err: #ff6b73;
+	--fig-c1: #ffff00;
+	--fig-c2: #ff66ff;
+	--fig-c3: #00ff80;
+	--fig-c4: #ffb000;
+	--fig-c5: #66aaff;
+	--fig-c6: #ff6b73;
+	--border: rgba(255, 255, 255, 0.62);
+	--border-strong: rgba(255, 255, 255, 0.88);
+	--edge-top: #fff;
+	--edge-bottom: rgba(255, 255, 255, 0.5);
+	--ring: #ffff00;
+	--ring-soft: rgba(255, 255, 0, 0.35);
+	--shadow-card: 0 0 0 1px #fff;
+	--shadow-overlay: 0 0 0 2px #fff;
+	--backdrop: rgba(0, 0, 0, 0.82);
+}
+
+[data-palette="contrast"][data-theme="light"] {
+	--bg: #fff;
+	--panel: #fff;
+	--bg-raised: #fff;
+	--bg-inset: #fff;
+	--bg-overlay: #fff;
+	--glass: rgba(255, 255, 255, 0.98);
+	--hover: rgba(0, 0, 0, 0.08);
+	--selected: rgba(0, 0, 0, 0.14);
+	--fg: #000;
+	--fg-muted: #111;
+	--fg-faint: #333;
+	--fg-inverse: #fff;
+	--accent-a: #0000a8;
+	--accent-b: #0000a8;
+	--accent: #0000a8;
+	--accent-fg: #fff;
+	--accent-muted: rgba(0, 0, 168, 0.12);
+	--ambient-a: rgba(0, 0, 168, 0.05);
+	--ambient-b: rgba(0, 0, 168, 0.04);
+	--ok: #006b3c;
+	--live: #006b3c;
+	--warn: #704400;
+	--err: #b00020;
+	--fig-c1: #0000a8;
+	--fig-c2: #870087;
+	--fig-c3: #006b3c;
+	--fig-c4: #704400;
+	--fig-c5: #004e9b;
+	--fig-c6: #b00020;
+	--border: rgba(0, 0, 0, 0.62);
+	--border-strong: rgba(0, 0, 0, 0.88);
+	--edge-top: #000;
+	--edge-bottom: rgba(0, 0, 0, 0.5);
+	--ring: #0000a8;
+	--ring-soft: rgba(0, 0, 168, 0.24);
+	--shadow-card: 0 0 0 1px #000;
+	--shadow-overlay: 0 0 0 2px #000;
+	--backdrop: rgba(0, 0, 0, 0.55);
+}
+
+/* Custom accent uses one stored OKLCH hue/chroma and derives a mode-safe accent. */
+[data-palette="custom"][data-theme="dark"] {
+	--accent-a: oklch(0.8 var(--accent-custom-c) var(--accent-custom-h));
+	--accent-b: oklch(0.7 var(--accent-custom-c) var(--accent-custom-h));
+	--accent: oklch(0.76 var(--accent-custom-c) var(--accent-custom-h));
+	--accent-fg: #111;
+	--accent-muted: oklch(0.76 var(--accent-custom-c) var(--accent-custom-h) / 0.17);
+	--ambient-a: oklch(0.8 var(--accent-custom-c) var(--accent-custom-h) / 0.07);
+	--ambient-b: oklch(0.7 var(--accent-custom-c) var(--accent-custom-h) / 0.05);
+	--ring: oklch(0.8 var(--accent-custom-c) var(--accent-custom-h));
+	--ring-soft: oklch(0.8 var(--accent-custom-c) var(--accent-custom-h) / 0.2);
+	--fig-c2: var(--accent);
+}
+
+[data-palette="custom"][data-theme="light"] {
+	--accent-a: oklch(0.43 var(--accent-custom-c) var(--accent-custom-h));
+	--accent-b: oklch(0.36 var(--accent-custom-c) var(--accent-custom-h));
+	--accent: oklch(0.4 var(--accent-custom-c) var(--accent-custom-h));
+	--accent-fg: #fff;
+	--accent-muted: oklch(0.4 var(--accent-custom-c) var(--accent-custom-h) / 0.12);
+	--ambient-a: oklch(0.43 var(--accent-custom-c) var(--accent-custom-h) / 0.05);
+	--ambient-b: oklch(0.36 var(--accent-custom-c) var(--accent-custom-h) / 0.04);
+	--ring: oklch(0.36 var(--accent-custom-c) var(--accent-custom-h));
+	--ring-soft: oklch(0.36 var(--accent-custom-c) var(--accent-custom-h) / 0.18);
+	--fig-c2: var(--accent);
+}

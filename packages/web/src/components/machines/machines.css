@@ -1,0 +1,67 @@
+.dk-machine-chip {
+	flex: none;
+	padding: 1px 5px;
+	border: 1px solid var(--border-strong);
+	border-radius: 999px;
+	background: var(--bg-raised);
+	color: var(--fg-muted);
+	font-size: 9px;
+	font-weight: 600;
+	line-height: 1.4;
+	white-space: nowrap;
+}
+
+.dk-machine-unreachable {
+	margin: 5px 8px;
+	color: var(--fg-faint);
+	font-size: 11px;
+}
+
+/* "Run on [Mac] [VPS]" in the new-session picker. */
+.dk-machine-switch {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	padding: 2px 0;
+}
+
+.dk-machine-switch-label {
+	margin-right: auto;
+	color: var(--fg-muted);
+	font-size: 11px;
+}
+
+.dk-machine-choice {
+	min-width: 52px;
+	padding: 5px 10px;
+	border: 1px solid var(--border-strong);
+	border-radius: var(--radius);
+	background: transparent;
+	color: var(--fg-muted);
+	font: inherit;
+	font-size: 12px;
+	cursor: pointer;
+}
+
+.dk-machine-choice:hover:not(:disabled) {
+	color: var(--fg);
+	background: var(--hover);
+}
+
+.dk-machine-choice-on,
+.dk-machine-choice-on:hover:not(:disabled) {
+	border-color: var(--accent);
+	background: var(--accent-muted);
+	color: var(--fg);
+	font-weight: 600;
+}
+
+.dk-machine-choice:disabled {
+	opacity: 0.45;
+	cursor: not-allowed;
+}
+
+.dk-machine-hint {
+	margin: 2px 0 0;
+	font-size: 11px;
+}

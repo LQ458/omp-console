@@ -1,0 +1,1 @@
+Continue the overnight run. You have not written OVERNIGHT-COMPLETE. Re-read your todo list and the task, pick the next unfinished item and keep working. If everything is finished and verified, write the morning report and end with OVERNIGHT-COMPLETE. Deadline: {{deadline}}.

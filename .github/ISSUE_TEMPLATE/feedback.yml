@@ -1,0 +1,28 @@
+name: Feedback
+description: Share what you tried, what was confusing, or what you expected.
+title: "[Feedback]: "
+body:
+  - type: markdown
+    attributes:
+      value: Please remove private project details, pairing codes, tokens, and credentials from any examples or screenshots.
+  - type: textarea
+    id: tried
+    attributes:
+      label: What did you try?
+      placeholder: Describe the screen, workflow, or task you tested.
+    validations:
+      required: true
+  - type: textarea
+    id: confusing
+    attributes:
+      label: What was confusing?
+      placeholder: Which wording, control, or result was unclear?
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+      placeholder: Describe what you expected to happen instead.
+    validations:
+      required: true

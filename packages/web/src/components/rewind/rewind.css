@@ -1,0 +1,72 @@
+.rw-points {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.rw-points li + li {
+	border-top: 1px solid var(--border);
+}
+
+.rw-point {
+	display: flex;
+	width: 100%;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 5px;
+	padding: 12px 8px;
+	border: 0;
+	border-radius: var(--radius-sm);
+	background: transparent;
+	color: var(--fg);
+	text-align: left;
+	cursor: pointer;
+}
+
+.rw-point:hover,
+.rw-point:focus-visible {
+	background: var(--hover);
+}
+
+.rw-point:disabled {
+	opacity: 0.6;
+	cursor: wait;
+}
+
+.rw-preview {
+	white-space: pre-wrap;
+	word-break: break-word;
+}
+
+.rw-time {
+	color: var(--fg-faint);
+	font-size: 11px;
+}
+
+.rw-error {
+	padding: 8px 10px;
+	border: 1px solid color-mix(in srgb, var(--err) 45%, transparent);
+	border-radius: var(--radius);
+	color: var(--err);
+}
+
+.rw-help {
+	margin: 0 0 8px;
+}
+
+.rw-kind {
+	padding: 1px 7px;
+	border-radius: 999px;
+	font: 600 10.5px/1.5 var(--font-mono);
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	color: var(--fg-muted);
+	background: var(--bg-raised);
+	border: 1px solid var(--border);
+}
+
+.rw-point[data-kind="user"] .rw-kind {
+	color: var(--accent);
+	border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+	background: color-mix(in srgb, var(--accent) 9%, var(--bg-raised));
+}

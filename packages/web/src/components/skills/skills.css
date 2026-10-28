@@ -1,0 +1,191 @@
+.sk-panel {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr);
+	gap: 13px;
+	color: var(--fg);
+}
+
+.sk-script-overlay {
+	position: fixed;
+	z-index: 10000;
+	inset: 0;
+	display: grid;
+	place-items: center;
+	padding: 20px;
+	background: rgb(0 0 0 / 56%);
+}
+
+.sk-script-confirm {
+	display: grid;
+	gap: 14px;
+	width: min(560px, 100%);
+	max-height: min(78vh, 620px);
+	overflow: auto;
+	padding: 20px;
+	color: var(--fg);
+	background: var(--bg);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-lg);
+	box-shadow: 0 20px 70px rgb(0 0 0 / 35%);
+}
+
+.sk-script-confirm h3,
+.sk-script-detail {
+	margin: 0;
+}
+
+.sk-script-confirm h3 {
+	font-size: 16px;
+}
+
+.sk-script-detail {
+	overflow-wrap: anywhere;
+	white-space: pre-wrap;
+	color: var(--fg-muted);
+	font-size: 13px;
+	line-height: 1.5;
+}
+
+.sk-script-actions {
+	display: flex;
+	justify-content: flex-end;
+	gap: 8px;
+}
+
+.sk-intro,
+.sk-item p,
+.sk-item span,
+.sk-item em,
+.sk-installed-head h3 {
+	margin: 0;
+	color: var(--fg-muted);
+	font-size: 12px;
+	line-height: 1.45;
+}
+
+.sk-search,
+.sk-install {
+	display: grid;
+	gap: 7px;
+}
+
+.sk-search > label,
+.sk-install > label:first-child {
+	color: var(--fg-muted);
+	font-size: 11px;
+	font-weight: 600;
+}
+
+.sk-search > div,
+.sk-install > div {
+	display: flex;
+	gap: 7px;
+}
+
+.sk-search input,
+.sk-install input:not([type="checkbox"]) {
+	min-width: 0;
+	flex: 1;
+	padding: 8px 10px;
+	color: var(--fg);
+	background: var(--bg-raised);
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	font: inherit;
+}
+
+.sk-search input:focus,
+.sk-install input:not([type="checkbox"]):focus {
+	outline: 1px solid var(--accent);
+	border-color: var(--accent);
+}
+
+.sk-global {
+	display: flex;
+	align-items: center;
+	gap: 7px;
+	color: var(--fg-muted);
+	font-size: 11px;
+}
+
+.sk-results,
+.sk-installed {
+	display: grid;
+	gap: 8px;
+}
+
+.sk-installed-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+}
+
+.sk-installed-head h3 {
+	color: var(--fg);
+	font-size: 14px;
+}
+
+.sk-item {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	min-width: 0;
+	padding: 10px;
+	background: var(--bg-raised);
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+}
+
+.sk-item > div {
+	display: grid;
+	gap: 3px;
+	min-width: 0;
+}
+
+.sk-item strong {
+	overflow-wrap: anywhere;
+	font-size: 13px;
+}
+
+.sk-item strong small {
+	margin-left: 5px;
+	color: var(--fg-faint);
+	font: 400 11px / 1 var(--font-mono);
+}
+
+.sk-item em {
+	color: var(--err);
+	font-style: normal;
+}
+
+.sk-item > button {
+	flex: 0 0 auto;
+}
+
+.sk-error,
+.sk-message {
+	margin: 0;
+	padding: 8px 10px;
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	white-space: pre-wrap;
+	font-size: 12px;
+}
+
+.sk-error {
+	color: var(--err);
+	background: color-mix(in srgb, var(--err) 10%, transparent);
+}
+
+.sk-message {
+	color: var(--ok);
+	background: color-mix(in srgb, var(--ok) 10%, transparent);
+}
+
+@media (max-width: 520px) {
+	.sk-item {
+		align-items: flex-start;
+	}
+}

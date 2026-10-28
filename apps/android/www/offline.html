@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>omp console: unreachable</title>
+<link rel="stylesheet" href="launcher.css">
+</head>
+<body>
+<main>
+	<section class="card">
+		<h1>Can’t reach the daemon</h1>
+		<p>omp console could not load <code id="target"></code>.</p>
+		<p class="muted" id="reason"></p>
+		<p class="muted">Check that the Mac is awake, the daemon is running, and Tailscale is connected on this tablet.</p>
+		<div class="actions">
+			<button id="retry" type="button">Retry</button>
+			<button id="change" type="button" class="secondary">Change daemon URL</button>
+		</div>
+	</section>
+</main>
+<script type="module" src="offline.js"></script>
+</body>
+</html>

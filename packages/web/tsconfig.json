@@ -1,0 +1,11 @@
+{
+	"extends": "../../tsconfig.base.json",
+	"include": ["src", "dev", "test", "bench", "scripts"],
+	"compilerOptions": {
+		"jsx": "react-jsx",
+		"lib": ["ES2024", "DOM", "DOM.Iterable"],
+		"noEmit": true,
+		"types": ["bun", "react", "react-dom"],
+		"typeRoots": ["../../types", "../../node_modules/@types", "./node_modules/@types"]
+	}
+}

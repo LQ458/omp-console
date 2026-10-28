@@ -1,0 +1,747 @@
+.so-panel {
+	display: grid;
+	gap: 14px;
+}
+
+.so-section {
+	min-width: 0;
+}
+
+.so-section > .dk-section-title {
+	display: flex;
+	align-items: center;
+	gap: 7px;
+}
+
+.so-header-controls {
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.sh-phone-menu-row .so-header-controls,
+.sh-overflow-session-mode .so-header-controls {
+	flex-wrap: wrap;
+	min-width: 0;
+}
+
+.so-plan-button,
+.so-plan-active {
+	display: inline-flex;
+	align-items: center;
+	gap: 7px;
+	min-height: 34px;
+	padding: 0 10px;
+	border: 1px solid var(--border);
+	border-radius: 999px;
+	font-size: 11px;
+	font-weight: 650;
+	letter-spacing: normal;
+	white-space: nowrap;
+}
+
+.so-plan-button {
+	color: var(--fg-muted);
+	background: var(--bg-raised);
+}
+
+.so-plan-active {
+	color: var(--fg);
+	background: color-mix(in srgb, var(--accent) 18%, var(--bg-raised));
+	border-color: var(--accent);
+}
+
+.so-loop-chip {
+	gap: 5px;
+	padding-right: 5px;
+}
+
+.so-loop-stop {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 22px;
+	height: 22px;
+	padding: 0;
+	color: inherit;
+	background: transparent;
+	border: 0;
+	border-radius: 50%;
+	cursor: pointer;
+}
+
+.so-loop-stop:hover:not(:disabled) {
+	background: var(--hover);
+}
+
+.so-plan-state {
+	padding: 2px 6px;
+	color: var(--fg-muted);
+	font-size: 10px;
+	font-weight: 650;
+	background: var(--bg-inset);
+	border-radius: 999px;
+}
+
+.so-plan-active .so-plan-state {
+	color: var(--fg);
+	background: color-mix(in srgb, var(--accent) 28%, var(--bg-raised));
+}
+
+.so-menu-trigger {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	width: auto;
+	min-width: 0;
+	height: 34px;
+	padding: 0 9px;
+	font-size: 11px;
+	white-space: nowrap;
+}
+
+.so-menu {
+	position: absolute;
+	top: calc(100% + 8px);
+	right: 0;
+	z-index: 70;
+	width: min(360px, calc(100cqi - 24px));
+	max-height: min(75vh, 620px);
+	padding: 14px;
+	overflow: auto;
+	color: var(--fg);
+	background: var(--panel);
+	border: 1px solid var(--border-strong);
+	border-radius: var(--radius-lg);
+	box-shadow: var(--shadow-card);
+}
+
+.so-menu-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	margin: -4px -4px 4px 0;
+}
+
+.so-menu-head h3 {
+	margin: 0;
+}
+
+.so-menu h3,
+.so-subheading {
+	margin: 0 0 8px;
+	font-size: 13px;
+	font-weight: 650;
+}
+
+.so-menu .ct-omp {
+	margin-top: 8px;
+}
+
+.so-field {
+	display: flex;
+	min-width: 0;
+	flex-direction: column;
+	gap: 5px;
+	color: var(--fg-muted);
+	font-size: 12px;
+}
+
+.so-field input,
+.so-field textarea,
+.so-field select,
+.so-task-row input,
+.so-task-row select {
+	min-width: 0;
+	min-height: 36px;
+	padding: 7px 9px;
+	color: var(--fg);
+	font: inherit;
+	background: var(--bg-raised);
+	border: 1px solid var(--border);
+	border-radius: 8px;
+}
+
+.so-field textarea {
+	resize: vertical;
+}
+
+.so-field input:focus-visible,
+.so-field textarea:focus-visible,
+.so-field select:focus-visible,
+.so-task-row input:focus-visible,
+.so-task-row select:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 1px;
+}
+
+.so-section button:disabled,
+.so-section input:disabled,
+.so-section textarea:disabled,
+.so-section select:disabled,
+.so-menu button:disabled,
+.so-menu select:disabled,
+.so-header-controls button:disabled {
+	cursor: not-allowed;
+	opacity: 0.5;
+}
+
+.so-action-row {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: end;
+	gap: 7px;
+}
+
+.so-action-row > .dk-wide-btn,
+.so-goal-form > .dk-wide-btn {
+	flex: 1 1 130px;
+}
+
+.so-primary {
+	color: var(--fg);
+	background: var(--selected);
+	border-color: var(--border-strong);
+}
+
+.so-secondary {
+	width: auto;
+	min-width: 0;
+}
+
+.so-danger {
+	border-color: var(--warn);
+}
+
+.so-warning {
+	padding: 10px;
+	background: color-mix(in srgb, var(--warn) 10%, var(--bg-raised));
+	border: 1px solid color-mix(in srgb, var(--warn) 42%, var(--border));
+	border-radius: var(--radius-lg);
+}
+
+.so-warning p,
+.so-error,
+.so-success {
+	margin: 0 0 8px;
+	font-size: 12px;
+	line-height: 1.45;
+}
+
+.so-error {
+	color: var(--warn);
+}
+
+.so-success {
+	color: var(--ok);
+}
+
+.so-goal-form {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(120px, 0.5fr);
+	gap: 8px;
+	margin-top: 10px;
+}
+
+.so-goal-form > .dk-wide-btn {
+	grid-column: 1 / -1;
+}
+
+.so-budget-edit {
+	flex: 1 1 140px;
+}
+
+.so-progress-label,
+.so-context-label {
+	display: flex;
+	justify-content: space-between;
+	gap: 10px;
+	margin: 8px 0 5px;
+	color: var(--fg-muted);
+	font-size: 11px;
+}
+
+.so-phase {
+	padding: 10px;
+	background: var(--bg-raised);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-lg);
+}
+
+.so-phase + .so-phase {
+	margin-top: 8px;
+}
+
+.so-phase-heading,
+.so-tree-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+}
+
+.so-phase-heading .so-field {
+	flex: 1;
+}
+
+.so-order-buttons {
+	display: inline-flex;
+	flex: none;
+	gap: 2px;
+}
+
+.so-order-buttons .dk-tap {
+	width: 32px;
+	min-height: 32px;
+}
+
+.so-task-row {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(120px, auto) auto;
+	align-items: center;
+	gap: 5px;
+	margin: 8px 0;
+}
+
+.so-context-parts {
+	display: grid;
+	gap: 8px;
+}
+
+.so-context-label {
+	margin: 0 0 4px;
+}
+
+.so-context-track {
+	height: 7px;
+	overflow: hidden;
+	background: var(--border-strong);
+	border-radius: 4px;
+}
+
+.so-context-track > span {
+	display: block;
+	height: 100%;
+	background: var(--accent-gradient);
+	border-radius: inherit;
+}
+
+.so-compact-options {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 7px;
+}
+
+.so-compact-option {
+	min-width: 0;
+}
+
+.so-compact-option .dk-wide-btn {
+	width: 100%;
+}
+
+.so-stats-grid {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 8px;
+	margin: 0 0 12px;
+}
+
+.so-stats-grid > div {
+	min-width: 0;
+	padding: 9px;
+	background: var(--bg-raised);
+	border: 1px solid var(--border);
+	border-radius: 8px;
+}
+
+.so-stats-grid dt {
+	color: var(--fg-muted);
+	font-size: 11px;
+}
+
+.so-stats-grid dd {
+	margin: 3px 0 0;
+	font: 600 12px / 1.4 var(--font-mono);
+	overflow-wrap: anywhere;
+}
+
+.so-agent-usage,
+.so-tree {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.so-agent-usage li {
+	display: flex;
+	justify-content: space-between;
+	gap: 8px;
+	padding: 8px 0;
+	border-top: 1px solid var(--border);
+	font-size: 12px;
+}
+
+.so-agent-usage li span:last-child {
+	color: var(--fg-muted);
+	text-align: end;
+}
+
+.so-tree > li {
+	padding: 7px 0;
+	border-top: 1px solid var(--border);
+}
+
+.so-tree > li[data-current="true"] .so-tree-role {
+	color: var(--accent);
+}
+
+.so-tree-row {
+	align-items: flex-start;
+}
+
+.so-tree-copy {
+	display: grid;
+	min-width: 0;
+	gap: 3px;
+}
+
+.so-tree-role {
+	color: var(--fg-muted);
+	font: 11px / 1.4 var(--font-mono);
+}
+
+.so-tree-preview {
+	display: -webkit-box;
+	overflow: hidden;
+	font-size: 12px;
+	line-height: 1.4;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 2;
+}
+
+.so-tree-row > .dk-wide-btn {
+	flex: none;
+	width: auto;
+	min-height: 32px;
+	padding-inline: 8px;
+}
+
+.so-plan-document {
+	min-width: 0;
+	background: var(--bg-raised);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-lg);
+}
+
+.so-plan-document summary {
+	padding: 9px 11px;
+	color: var(--fg-muted);
+	font: 11px / 1.4 var(--font-mono);
+	cursor: pointer;
+	overflow-wrap: anywhere;
+}
+
+.so-plan-document pre {
+	max-height: 320px;
+	margin: 0;
+	padding: 10px 12px;
+	overflow: auto;
+	border-top: 1px solid var(--border);
+	font: 12px / 1.55 var(--font-mono);
+	white-space: pre-wrap;
+	word-break: break-word;
+}
+
+.so-report {
+	max-height: 420px;
+	padding: 10px;
+	overflow: auto;
+	background: var(--bg-raised);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-lg);
+}
+
+.so-report-body {
+	font-size: 13px;
+	line-height: 1.55;
+}
+
+.so-journal-list {
+	max-height: 300px;
+	overflow: auto;
+}
+
+.so-journal-row {
+	display: grid;
+	grid-template-columns: 1fr auto;
+	gap: 3px 8px;
+	padding: 8px 0;
+	border-top: 1px solid var(--border);
+	font-size: 11px;
+}
+
+.so-journal-row span:last-child {
+	color: var(--fg-muted);
+}
+
+/* Floats over the top of the transcript (the host has no height), so it never moves the conversation. */
+.so-suggestion-host {
+	position: relative;
+	z-index: 20;
+	height: 0;
+}
+
+.so-suggestion {
+	position: absolute;
+	top: 8px;
+	right: 12px;
+	display: flex;
+	width: min(440px, calc(100% - 24px));
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	padding: 10px 12px;
+	background: var(--bg-raised);
+	border: 1px solid var(--border-strong);
+	border-radius: var(--radius-lg);
+	box-shadow: var(--shadow-overlay);
+	animation: so-suggestion-in var(--dur-base, 200ms) var(--ease-out, ease-out);
+}
+
+@keyframes so-suggestion-in {
+	from {
+		opacity: 0;
+		transform: translateY(-4px);
+	}
+}
+
+.so-suggestion-copy {
+	min-width: 0;
+}
+
+.so-suggestion-copy strong {
+	display: block;
+	font-size: 12px;
+}
+
+.so-suggestion-copy p {
+	margin: 3px 0 0;
+	color: var(--fg-muted);
+	font-size: 11px;
+}
+
+.so-suggestion-actions {
+	display: flex;
+	flex: none;
+	align-items: center;
+	gap: 5px;
+}
+
+.so-suggestion-actions .dk-wide-btn {
+	width: auto;
+	min-height: 36px;
+}
+
+@media (max-width: 560px) {
+	.so-goal-form {
+		grid-template-columns: 1fr;
+	}
+
+	.so-goal-form > .dk-wide-btn {
+		grid-column: auto;
+	}
+
+	.so-compact-options {
+		grid-template-columns: 1fr;
+	}
+
+	.so-task-row {
+		grid-template-columns: minmax(0, 1fr) auto;
+	}
+
+	.so-task-row > select {
+		grid-column: 1;
+	}
+
+	.so-task-row > .so-order-buttons {
+		grid-column: 2;
+		grid-row: 1 / span 2;
+	}
+
+	.so-tree-row {
+		flex-direction: column;
+	}
+
+	.so-tree-row > .dk-wide-btn {
+		align-self: flex-start;
+	}
+
+	.so-suggestion {
+		align-items: flex-start;
+		flex-direction: column;
+	}
+
+	.so-header-controls {
+		position: static;
+	}
+
+	.so-menu {
+		position: fixed;
+		top: calc(env(safe-area-inset-top, 0px) + 56px);
+		right: 12px;
+		left: 12px;
+		width: auto;
+		max-height: calc(100dvh - env(safe-area-inset-top, 0px) - 68px);
+	}
+}
+.so-suggestion-equivalent {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+	margin-top: 5px;
+	color: var(--fg-muted);
+	font-size: 10px;
+}
+
+.so-suggestion-equivalent code,
+.so-report pre {
+	font-family: var(--font-mono);
+	overflow-wrap: anywhere;
+}
+
+.so-report pre {
+	margin: 0;
+	font-size: 12px;
+	line-height: 1.55;
+	white-space: pre-wrap;
+}
+
+.so-journal-viewer > summary {
+	padding: 8px 0;
+	color: var(--fg-muted);
+	font-size: 12px;
+	cursor: pointer;
+}
+
+.so-journal-row p {
+	grid-column: 1 / -1;
+	margin: 0;
+	color: var(--fg-muted);
+	overflow-wrap: anywhere;
+}
+
+@container pane (max-width: 520px) {
+	.so-suggestion {
+		align-items: center;
+		flex-direction: row;
+		gap: 8px;
+		margin: 6px 8px 0;
+		padding: 6px 8px;
+	}
+
+	.so-suggestion-copy {
+		flex: 1 1 auto;
+		overflow: hidden;
+	}
+
+	.so-suggestion-copy strong {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.so-suggestion-copy p,
+	.so-suggestion-copy .so-error,
+	.so-suggestion-equivalent {
+		display: none;
+	}
+
+	.so-suggestion-actions {
+		gap: 4px;
+	}
+
+	/* The action label stays whole (it says what the click does); the title gives way with an ellipsis instead. */
+	.so-suggestion-actions .dk-wide-btn {
+		min-height: 32px;
+		padding: 0 10px;
+		font-size: 12px;
+		white-space: nowrap;
+	}
+
+	.so-suggestion:is(:hover, :active, :focus-within) {
+		align-items: flex-start;
+		z-index: 5;
+	}
+
+	.so-suggestion:is(:hover, :active, :focus-within) .so-suggestion-copy {
+		overflow: visible;
+	}
+
+	.so-suggestion:is(:hover, :active, :focus-within) .so-suggestion-copy strong {
+		overflow: visible;
+		text-overflow: clip;
+		white-space: normal;
+		overflow-wrap: anywhere;
+	}
+
+	.so-suggestion:is(:hover, :active, :focus-within) .so-suggestion-copy p,
+	.so-suggestion:is(:hover, :active, :focus-within) .so-suggestion-copy .so-error {
+		display: block;
+		overflow-wrap: anywhere;
+	}
+
+	.so-suggestion:is(:hover, :active, :focus-within) .so-suggestion-equivalent {
+		display: flex;
+		flex-wrap: wrap;
+	}
+}
+
+/* A pane this narrow has no room for the title: keep the action and the dismiss button, the label may ellipsize. */
+@container pane (max-width: 240px) {
+	.so-suggestion .so-suggestion-copy {
+		display: none;
+	}
+
+	.so-suggestion-actions {
+		flex: 1 1 auto;
+		min-width: 0;
+	}
+
+	/* Block, not flex: text-overflow only applies to a block's own line, and a centred flex label clips both ends. */
+	.so-suggestion-actions .dk-wide-btn {
+		display: block;
+		flex: 1 1 auto;
+		min-width: 0;
+		line-height: 30px;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+}
+
+.so-menu.so-menu-portal {
+	position: fixed;
+	top: 0;
+	right: auto;
+	left: 0;
+	width: min(360px, calc(100vw - 24px));
+}
+
+/* The approval trigger carries a label: `.dk-tap`'s fixed 32 px square (mobile.css) must not squeeze it. */
+.dk-tap.so-menu-trigger {
+	width: auto;
+	padding: 0 9px;
+}
+
+/* Tight headers keep the icon and chevron; the label stays in the tooltip and aria-label. */
+@container sh-header (max-width: 760px) {
+	.so-menu-trigger > span {
+		display: none;
+	}
+}
+
+.sh-header[data-mode="phone"] .so-menu-trigger > span {
+	display: none;
+}

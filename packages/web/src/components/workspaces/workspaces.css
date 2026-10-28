@@ -1,0 +1,782 @@
+/* Workspaces (ws-*): look per workspace, mode badges, the workspaces panel, rules editor and quick-ask.
+ * Token vars only. `--ws-accent`, `--ws-accent-text`, `--ws-tint`, `--ws-chip-bg` come from lib/workspace-color.ts
+ * (computed, gamut-mapped colours set as inline custom properties). Hue = where, badge shape = what mode. */
+
+/* ---- look: dot, chip, accent bar, composer tint ---- */
+.ws-dot {
+	display: inline-block;
+	flex: none;
+	width: 8px;
+	height: 8px;
+	margin-right: 6px;
+	vertical-align: 0.04em;
+	border-radius: 50%;
+	background: var(--ws-accent);
+	transition: background-color 150ms ease-out;
+}
+
+.ws-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	flex: none;
+	max-width: 190px;
+	height: 22px;
+	padding: 0 9px 0 7px;
+	font: 500 11.5px / 1 var(--font-ui);
+	color: var(--ws-accent-text);
+	background: var(--ws-chip-bg);
+	border: 1px solid color-mix(in srgb, var(--ws-accent) 32%, transparent);
+	border-radius: 999px;
+	white-space: nowrap;
+	transition:
+		background-color 150ms ease-out,
+		color 150ms ease-out;
+}
+
+button.ws-chip {
+	cursor: pointer;
+}
+
+button.ws-chip:hover {
+	border-color: var(--ws-accent);
+}
+
+/* Goal: an amber ring around the chip. */
+.ws-chip[data-ring="goal"] {
+	box-shadow:
+		0 0 0 2px var(--bg),
+		0 0 0 3.5px var(--warn);
+}
+
+.ws-chip-dot {
+	flex: none;
+	width: 7px;
+	height: 7px;
+	border-radius: 50%;
+	background: var(--ws-accent);
+}
+
+.ws-chip-name {
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.ws-accent-bar {
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	z-index: 30;
+	height: 3px;
+	background: var(--ws-accent);
+	pointer-events: none;
+	transition: background-color 150ms ease-out;
+}
+
+/* 4-6% wash behind the composer text, never a full-background fill. */
+.sh-app[data-ws] .sh-composer-inner {
+	position: relative;
+	isolation: isolate;
+}
+
+.sh-app[data-ws] .sh-composer-inner::before {
+	content: "";
+	position: absolute;
+	inset: 0;
+	z-index: -1;
+	border-radius: inherit;
+	background: var(--ws-tint);
+	pointer-events: none;
+	transition: background-color 150ms ease-out;
+}
+
+/* Plan mode: dashed violet composer border. */
+.sh-app[data-plan="true"] .sh-composer-inner {
+	border-style: dashed;
+	border-color: var(--mark-b);
+}
+
+/* Phone: the chips live in a strip at the top of the panel (the header has no room). */
+.ws-strip {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 6px;
+	flex: none;
+	width: 100%;
+	padding: 7px 12px;
+	border-bottom: 1px solid var(--border);
+	background: var(--panel);
+}
+
+.ws-strip:empty {
+	display: none;
+}
+
+/* ---- mode badges ---- */
+.ws-badges {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+	flex: none;
+}
+
+.ws-badge {
+	--badge: var(--fg-muted);
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	height: 22px;
+	padding: 0 8px;
+	font: 600 10.5px / 1 var(--font-ui);
+	letter-spacing: 0.02em;
+	color: color-mix(in srgb, var(--badge) 62%, var(--fg));
+	background: color-mix(in srgb, var(--badge) 13%, transparent);
+	border: 1px solid color-mix(in srgb, var(--badge) 38%, transparent);
+	border-radius: 999px;
+	white-space: nowrap;
+	transition:
+		background-color 150ms ease-out,
+		border-color 150ms ease-out;
+}
+
+.ws-badge[data-tone="amber"] {
+	--badge: var(--warn);
+}
+
+.ws-badge[data-tone="violet"] {
+	--badge: var(--mark-b);
+}
+
+.ws-badge[data-tone="accent"] {
+	--badge: var(--accent);
+}
+
+.ws-badge-bar {
+	display: inline-block;
+	width: 26px;
+	height: 3px;
+	overflow: hidden;
+	background: color-mix(in srgb, var(--badge) 25%, transparent);
+	border-radius: 2px;
+}
+
+.ws-badge-bar > span {
+	display: block;
+	height: 100%;
+	background: var(--badge);
+	border-radius: inherit;
+}
+
+.sh-header-left .ws-chip,
+.sh-header-left .ws-badges {
+	margin-left: 2px;
+}
+
+/* ---- panel ---- */
+.ws-sheet-top {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	padding-top: 8px;
+}
+
+.ws-ask-btn {
+	justify-content: flex-start;
+	height: 36px;
+}
+
+.ws-kbd {
+	margin-left: auto;
+	padding: 1px 6px;
+	font: 500 11px / 1.5 var(--font-mono);
+	color: var(--fg-muted);
+	background: var(--bg-inset);
+	border: 1px solid var(--border-strong);
+	border-radius: var(--radius-sm);
+}
+
+.ws-panel,
+.ws-rules {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+
+.ws-list {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.ws-item {
+	background: var(--bg-raised);
+	border: 1px solid var(--border);
+	border-left: 3px solid var(--ws-accent);
+	border-radius: var(--radius-lg);
+	transition: border-color 150ms ease-out;
+}
+
+.ws-item[data-open="true"] {
+	border-color: var(--border-strong);
+	border-left-color: var(--ws-accent);
+}
+
+.ws-item-head {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	width: 100%;
+	min-height: 56px;
+	padding: 9px 12px 9px 10px;
+	text-align: left;
+	color: var(--fg);
+	background: transparent;
+	border: 0;
+	border-radius: var(--radius-lg);
+	cursor: pointer;
+}
+
+.ws-item-head:hover {
+	background: var(--hover);
+}
+
+.ws-swatch {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	flex: none;
+	width: 30px;
+	height: 30px;
+	color: var(--ws-accent-text);
+	background: var(--ws-chip-bg);
+	border-radius: 50%;
+}
+
+.ws-item-main {
+	flex: 1;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 1px;
+}
+
+.ws-item-name {
+	font-size: 14px;
+	font-weight: 600;
+}
+
+.ws-item-sub,
+.ws-item-git {
+	font-size: 11.5px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.ws-item-sub {
+	font-family: var(--font-mono);
+	color: var(--fg-faint);
+}
+
+.ws-item-git {
+	color: var(--fg-muted);
+}
+
+.ws-item-live {
+	flex: none;
+	font-size: 11.5px;
+	font-variant-numeric: tabular-nums;
+	color: var(--fg-faint);
+}
+
+.ws-item-live[data-live="true"] {
+	color: var(--live);
+}
+
+.ws-item-body {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	padding: 2px 12px 12px 12px;
+}
+
+.ws-row-actions {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px;
+}
+
+.ws-colour {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 7px;
+}
+
+.ws-colour-label {
+	margin-right: 4px;
+	font-size: 12px;
+	font-weight: 500;
+	color: var(--fg-muted);
+}
+
+.ws-hue {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 22px;
+	height: 22px;
+	padding: 0;
+	border: 0;
+	border-radius: 50%;
+	cursor: pointer;
+}
+
+.ws-hue[data-on="true"] {
+	box-shadow:
+		0 0 0 2px var(--bg-raised),
+		0 0 0 4px var(--fg);
+}
+
+.ws-hue-auto {
+	color: var(--fg-muted);
+	background: var(--bg-inset);
+	border: 1px solid var(--border-strong);
+}
+
+.ws-muted {
+	font-size: 12px;
+	color: var(--fg-faint);
+}
+
+.ws-empty {
+	padding: 18px 8px;
+	font-size: 13px;
+	text-align: center;
+	color: var(--fg-muted);
+}
+
+.ws-notice {
+	margin: 0;
+}
+
+/* ---- rules editor ---- */
+.ws-rules-head {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding-top: 8px;
+}
+
+.ws-rules-title {
+	flex: 1;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+}
+
+.ws-visibility-cards {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 8px;
+}
+
+.ws-vis-card {
+	padding: 10px 12px;
+	font-size: 12.5px;
+	line-height: 1.45;
+	background: var(--bg-raised);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-lg);
+}
+
+.ws-vis-card p {
+	margin: 4px 0 0;
+}
+
+.ws-vis-title {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	font-weight: 600;
+}
+
+.ws-vis-card[data-visibility="private"] .ws-vis-title {
+	color: var(--accent);
+}
+
+.ws-rule-list {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.ws-rule-row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	width: 100%;
+	min-height: 40px;
+	padding: 6px 10px;
+	text-align: left;
+	color: var(--fg);
+	background: var(--bg-raised);
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	cursor: pointer;
+}
+
+.ws-rule-row:hover,
+.ws-rule-row[data-selected="true"] {
+	background: var(--selected);
+}
+
+.ws-rule-row code {
+	min-width: 0;
+	overflow: hidden;
+	font-size: 12px;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.ws-vis-badge {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	flex: none;
+	height: 20px;
+	padding: 0 7px;
+	font-size: 11px;
+	font-weight: 600;
+	text-transform: lowercase;
+	border-radius: 999px;
+}
+
+.ws-vis-badge[data-visibility="private"] {
+	color: color-mix(in srgb, var(--accent) 70%, var(--fg));
+	background: var(--accent-muted);
+}
+
+.ws-vis-badge[data-visibility="shared"] {
+	color: var(--fg-muted);
+	background: var(--selected);
+}
+
+.ws-new-rule {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	padding: 10px;
+	background: var(--bg-raised);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-lg);
+}
+
+.ws-segment-2 {
+	grid-template-columns: repeat(2, 1fr);
+}
+
+.ws-editor {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.ws-editor-head {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	min-width: 0;
+}
+
+.ws-editor-head code {
+	min-width: 0;
+	overflow: hidden;
+	font-size: 12px;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.ws-dirty {
+	margin-left: auto;
+	font-size: 11.5px;
+	color: var(--warn);
+}
+
+.ws-editor-text {
+	width: 100%;
+	min-height: 220px;
+	padding: 10px 12px;
+	font: 400 12.5px / 1.55 var(--font-mono);
+	color: var(--fg);
+	resize: vertical;
+	background: var(--bg-inset);
+	border: 1px solid var(--border-strong);
+	border-radius: var(--radius);
+}
+
+.ws-editor-text:focus {
+	outline: none;
+	border-color: var(--ring);
+	box-shadow: 0 0 0 3px var(--ring-soft);
+}
+
+.ws-privnote {
+	display: flex;
+	align-items: center;
+	gap: 5px;
+	margin: 0;
+}
+
+.ws-diff {
+	margin: 0;
+	padding: 8px 0;
+	max-height: 260px;
+	overflow: auto;
+	font: 400 12px / 1.5 var(--font-mono);
+	background: var(--bg-inset);
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+}
+
+.ws-diff-line {
+	display: block;
+	padding: 0 10px;
+	white-space: pre;
+}
+
+.ws-diff-line[data-kind="add"] {
+	color: var(--ok);
+	background: color-mix(in srgb, var(--ok) 10%, transparent);
+}
+
+.ws-diff-line[data-kind="del"] {
+	color: var(--err);
+	background: color-mix(in srgb, var(--err) 10%, transparent);
+}
+
+.ws-diff-line[data-kind="hunk"] {
+	color: var(--accent);
+}
+
+.ws-diff-line[data-kind="meta"] {
+	color: var(--fg-faint);
+}
+
+/* ---- quick ask ---- */
+.ws-quick-root {
+	position: absolute;
+	inset: 0;
+	z-index: 90;
+}
+
+.ws-quick-backdrop {
+	position: absolute;
+	inset: 0;
+	background: var(--backdrop);
+	animation: sh-fade-in 150ms ease-out;
+}
+
+.ws-quick {
+	position: absolute;
+	top: calc(env(safe-area-inset-top, 0px) + 72px);
+	left: 50%;
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	width: min(580px, calc(100% - 24px));
+	padding: 12px;
+	background: var(--bg-overlay);
+	border: 1px solid var(--border-strong);
+	border-radius: var(--radius-xl);
+	box-shadow: var(--shadow-overlay);
+	transform: translateX(-50%);
+	animation: ws-quick-in 180ms var(--ease-out) backwards;
+}
+
+@keyframes ws-quick-in {
+	from {
+		opacity: 0;
+		transform: translateX(-50%) translateY(-8px);
+	}
+	to {
+		opacity: 1;
+		transform: translateX(-50%);
+	}
+}
+
+.ws-quick-head {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-size: 13px;
+	font-weight: 600;
+	color: var(--fg-muted);
+}
+
+.ws-quick-head .ws-kbd {
+	margin-left: 2px;
+}
+
+.ws-quick-head .sh-btn-icon {
+	margin-left: auto;
+}
+
+.ws-quick-input {
+	width: 100%;
+	padding: 10px 12px;
+	font: 400 14.5px / 1.5 var(--font-ui);
+	color: var(--fg);
+	resize: none;
+	background: var(--bg-inset);
+	border: 1px solid var(--border-strong);
+	border-radius: var(--radius);
+}
+
+.ws-quick-input:focus {
+	outline: none;
+	border-color: var(--ring);
+	box-shadow: 0 0 0 3px var(--ring-soft);
+}
+
+.ws-sources {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 4px 14px;
+	margin: 0;
+	padding: 0;
+	border: 0;
+}
+
+.ws-sources-legend {
+	float: left;
+	margin-right: 14px;
+	padding: 0;
+	font-size: 12px;
+	font-weight: 500;
+	color: var(--fg-muted);
+}
+
+.ws-source {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	min-height: 32px;
+	font-size: 13px;
+	cursor: pointer;
+}
+
+.ws-source input {
+	width: 16px;
+	height: 16px;
+	accent-color: var(--accent);
+}
+
+.ws-answer {
+	position: absolute;
+	top: 0;
+	right: 0;
+	bottom: 0;
+	z-index: 85;
+	display: flex;
+	flex-direction: column;
+	width: min(460px, 100%);
+	background: var(--bg);
+	border-left: 1px solid var(--border-strong);
+	box-shadow: var(--rail-mobile-shadow);
+	animation: ws-answer-in 200ms var(--ease-out) backwards;
+}
+
+@keyframes ws-answer-in {
+	from {
+		opacity: 0;
+		transform: translateX(24px);
+	}
+	to {
+		opacity: 1;
+		transform: none;
+	}
+}
+
+.ws-answer-head {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	flex: none;
+	padding: 8px 8px 8px 14px;
+	padding-top: calc(8px + env(safe-area-inset-top, 0px));
+	border-bottom: 1px solid var(--border);
+}
+
+.ws-answer-title {
+	flex: 1;
+	font-size: 14px;
+	font-weight: 600;
+}
+
+.ws-answer-body {
+	flex: 1;
+	min-height: 0;
+	display: flex;
+	flex-direction: column;
+}
+
+.ws-answer-transcript {
+	flex: 1;
+	min-height: 0;
+	display: flex;
+	flex-direction: column;
+}
+
+.ws-answer-transcript > :last-child {
+	flex: 1;
+	min-height: 0;
+}
+
+@media (max-width: 759.98px) {
+	.ws-visibility-cards {
+		grid-template-columns: 1fr;
+	}
+	.ws-quick {
+		top: calc(env(safe-area-inset-top, 0px) + 16px);
+	}
+	.ws-sources {
+		gap: 0 12px;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.ws-dot,
+	.ws-chip,
+	.ws-accent-bar,
+	.ws-badge,
+	.ws-badge-bar > span,
+	.ws-item,
+	.ws-hue,
+	.sh-app[data-ws] .sh-composer-inner::before {
+		transition: none;
+	}
+	.ws-quick,
+	.ws-answer,
+	.ws-quick-backdrop {
+		animation: none;
+	}
+}
+
+@media (pointer: coarse) {
+	.ws-hue {
+		width: 36px;
+		height: 36px;
+	}
+}

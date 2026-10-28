@@ -1,0 +1,260 @@
+.dk-new-picker {
+	display: flex;
+	flex-direction: column;
+	gap: 9px;
+	margin: 0 4px;
+	padding: 10px;
+	border: 1px solid var(--border-strong);
+	border-radius: var(--radius-lg);
+	background: var(--bg-raised);
+}
+
+.dk-new-picker-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	font-size: 12px;
+	color: var(--fg);
+}
+
+.dk-new-options {
+	max-height: 220px;
+	overflow-y: auto;
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.dk-new-option {
+	width: 100%;
+	min-height: 42px;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 6px 8px;
+	border: 0;
+	border-radius: var(--radius);
+	background: transparent;
+	color: var(--fg);
+	text-align: left;
+	cursor: pointer;
+}
+
+.dk-new-option:hover,
+.dk-new-option[data-active="true"] {
+	background: var(--hover);
+}
+
+.dk-new-option-main {
+	min-width: 0;
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.dk-new-option-main > span,
+.dk-new-option-main code {
+	min-width: 0;
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+}
+
+.dk-new-option-main > span {
+	font-size: 12px;
+}
+
+.dk-new-option-main code {
+	font-size: 10px;
+	color: var(--fg-faint);
+}
+
+.dk-new-count {
+	color: var(--fg-muted);
+}
+
+.dk-new-option-action {
+	color: var(--accent);
+}
+
+.dk-new-hint,
+.dk-new-error {
+	margin: 0;
+	font-size: 11px;
+	color: var(--fg-muted);
+}
+
+.dk-new-error {
+	color: var(--err);
+}
+
+.dk-new-model {
+	border-top: 1px solid var(--border);
+	padding-top: 7px;
+}
+
+.dk-new-model summary {
+	display: flex;
+	align-items: center;
+	gap: 5px;
+	color: var(--fg-muted);
+	font-size: 11px;
+	cursor: pointer;
+	list-style: none;
+}
+
+.dk-new-model summary::-webkit-details-marker {
+	display: none;
+}
+
+.dk-new-model[open] summary svg {
+	transform: rotate(180deg);
+}
+
+.dk-new-model input {
+	margin-top: 7px;
+}
+
+.dk-recipe-backdrop {
+	position: fixed;
+	inset: 0;
+	z-index: 90;
+	display: grid;
+	place-items: center;
+	padding: 16px;
+	background: var(--backdrop);
+}
+
+.dk-recipe-editor {
+	width: min(520px, 100%);
+	max-height: min(760px, calc(100dvh - 32px));
+	overflow: auto;
+	padding: 16px;
+	border: 1px solid var(--border-strong);
+	border-radius: var(--radius-lg);
+	background: var(--bg-raised);
+	box-shadow: var(--shadow-card);
+}
+
+.dk-recipe-head,
+.dk-recipe-buttons {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 10px;
+}
+
+.dk-recipe-head {
+	margin-bottom: 14px;
+}
+
+.dk-recipe-head h2 {
+	margin: 0;
+	font-size: 15px;
+}
+
+.dk-recipe-head p {
+	margin: 3px 0 0;
+	color: var(--fg-muted);
+	font-size: 11px;
+}
+
+.dk-recipe-form {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+
+.dk-recipe-prompt {
+	min-height: 104px;
+	resize: vertical;
+}
+
+.dk-recipe-buttons {
+	justify-content: flex-end;
+	padding-top: 4px;
+}
+
+.dk-recipe-list {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	padding-bottom: 8px;
+	border-bottom: 1px solid var(--border);
+}
+
+.dk-recipe-list h3 {
+	margin: 0;
+	color: var(--fg-muted);
+	font-size: 11px;
+	font-weight: 600;
+}
+
+.dk-recipe-option {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	min-width: 0;
+	padding: 7px 8px;
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	background: var(--bg);
+	color: var(--fg);
+	text-align: left;
+	cursor: pointer;
+}
+
+.dk-recipe-option:hover:not(:disabled) {
+	border-color: var(--accent);
+	background: var(--hover);
+}
+
+.dk-recipe-option:disabled {
+	opacity: 0.55;
+	cursor: not-allowed;
+}
+
+.dk-recipe-option > span:last-child {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	min-width: 0;
+}
+
+.dk-recipe-option strong,
+.dk-recipe-option small {
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+}
+
+.dk-recipe-option strong {
+	font-size: 11px;
+	font-weight: 550;
+}
+
+.dk-recipe-option small {
+	color: var(--fg-faint);
+	font-size: 10px;
+}
+.dk-new-prompt {
+	margin: 0;
+	font-size: 12px;
+	color: var(--fg-muted);
+}
+
+.dk-new-more-options {
+	border-top: 1px solid var(--border);
+	padding-top: 7px;
+}
+
+.dk-new-more-options > summary {
+	color: var(--fg-muted);
+	font-size: 11px;
+	cursor: pointer;
+}
+
+.dk-new-more-options[open] > summary {
+	margin-bottom: 7px;
+}
