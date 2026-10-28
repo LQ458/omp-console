@@ -232,13 +232,16 @@ export function CommandResults(props: { client: DeckClient; sessionId?: string }
 	const subscribe = useCallback((listener: () => void) => client.subscribe(listener), [client]);
 	const getSnapshot = useCallback(() => client.getSnapshot().commandResults, [client]);
 	const results = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
-	const [now, setNow] = useState(() => Date.now());
+	const [, setTick] = useState(0);
 
+	// The interval only re-renders; the clock is read at render. Keeping `now` in state from mount made a /usage result
+	// that arrived later count down from the mount time until the first tick (6h 55m for a 5h window).
 	useEffect(() => {
 		if (!results.some(result => result.usageReports && result.usageReports.length > 0)) return;
-		const timer = window.setInterval(() => setNow(Date.now()), 60_000);
+		const timer = window.setInterval(() => setTick(tick => tick + 1), 60_000);
 		return () => window.clearInterval(timer);
 	}, [results]);
+	const now = Date.now();
 
 	if (results.length === 0) return null;
 	return (
