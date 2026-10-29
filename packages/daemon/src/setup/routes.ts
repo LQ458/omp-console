@@ -6,6 +6,7 @@ import type { SetupResponse } from "@omp-console/protocol";
 import { loadAllMCPConfigs } from "@oh-my-pi/pi-coding-agent/mcp/config";
 import { json } from "../api";
 import type { RecentSessionLister } from "../recent";
+import { findExecutable, isWindows } from "../platform";
 
 interface SetupModelSource {
 	availableModelCount(): Promise<number>;
@@ -95,40 +96,30 @@ const OMP_VERSION_TIMEOUT_MS = 5_000;
 
 async function findOmp(): Promise<SetupResponse["omp"]> {
 	// PATH first, then where Bun and user installs put it: a service or a `su -` shell often lacks ~/.bun/bin on PATH.
-	const home = os.homedir();
-	const directories = [...(process.env.PATH ?? "").split(path.delimiter), path.join(home, ".bun", "bin"), path.join(home, ".local", "bin")];
-	for (const directory of new Set(directories)) {
-		if (directory === "") continue;
-		const candidate = path.join(directory, "omp");
-		try {
-			await fs.access(candidate, fsConstants.X_OK);
-		} catch {
-			continue;
-		}
-		// Run the launcher as installed, with its folder on PATH: Bun's global `omp` is a `#!/usr/bin/env bun` script
-		// whose `bun` lives next to it in ~/.bun/bin, which a service PATH often lacks.
-		const executable = candidate;
-		try {
-			// Async with a deadline: a slow or hung `omp` must not freeze every other route and relay socket.
-			const child = Bun.spawn([executable, "--version"], {
-				stdout: "pipe",
-				stderr: "ignore",
-				env: { ...process.env, PATH: [directory, process.env.PATH ?? ""].filter(Boolean).join(path.delimiter) },
-			});
-			const timer = setTimeout(() => child.kill(), OMP_VERSION_TIMEOUT_MS);
-			const [versionText, exitCode] = await Promise.all([new Response(child.stdout).text(), child.exited]).finally(() => clearTimeout(timer));
-			const version = exitCode === 0 ? /(?:^|[\s/])v?(\d+\.\d+\.\d+(?:[-+][\w.-]+)?)/.exec(versionText.trim())?.[1] ?? null : null;
-			return {
-				found: true,
-				path: executable,
-				version,
-				error: version === null ? "omp was found, but `omp --version` did not return a version." : null,
-			};
-		} catch {
-			return { found: true, path: executable, version: null, error: "omp was found, but `omp --version` could not run." };
-		}
+	const executable = findExecutable("omp");
+	if (executable === undefined) return { found: false, path: null, version: null, error: null };
+	const directory = path.dirname(executable);
+	const versionCommand = isWindows && /\.cmd$/i.test(executable)
+		? ["cmd.exe", "/d", "/s", "/c", `""${executable}" --version"`]
+		: [executable, "--version"];
+	try {
+		const child = Bun.spawn(versionCommand, {
+			stdout: "pipe",
+			stderr: "ignore",
+			env: { ...process.env, PATH: [directory, process.env.PATH ?? ""].filter(Boolean).join(path.delimiter) },
+		});
+		const timer = setTimeout(() => child.kill(), OMP_VERSION_TIMEOUT_MS);
+		const [versionText, exitCode] = await Promise.all([new Response(child.stdout).text(), child.exited]).finally(() => clearTimeout(timer));
+		const version = exitCode === 0 ? /(?:^|[\s/])v?(\d+\.\d+\.\d+(?:[-+][\w.-]+)?)/.exec(versionText.trim())?.[1] ?? null : null;
+		return {
+			found: true,
+			path: executable,
+			version,
+			error: version === null ? "omp was found, but `omp --version` did not return a version." : null,
+		};
+	} catch {
+		return { found: true, path: executable, version: null, error: "omp was found, but `omp --version` could not run." };
 	}
-	return { found: false, path: null, version: null, error: null };
 }
 
 async function readResult<T>(read: () => Promise<T>): Promise<{ value: T | null; error: string | null }> {

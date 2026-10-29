@@ -117,16 +117,39 @@ describe("dropped files", () => {
 		expect(relativeToCwd(`${CWD}/../other/x.ts`, CWD)).toBeNull();
 		expect(relativeToCwd(CWD, CWD)).toBe(".");
 	});
+	it("keeps POSIX backslashes as filename characters during relative path handling", () => {
+		expect(relativeToCwd(`${CWD}/src\\index.ts`, CWD)).toBe("src\\index.ts");
+	});
+	it("matches Windows drops and relative mentions across separator styles", () => {
+		const cwd = "C:\\Users\\Alex\\work\\repo";
+		const file = "C:\\Users\\Alex\\work\\repo\\src\\index.ts";
+		expect(formatDroppedPath(file, "c:/users/alex/work/REPO")).toBe("@src/index.ts");
+		expect(relativeToCwd("C:\\Users\\Alex\\work\\repo\\src\\..\\README.md", "c:/users/alex/work/repo")).toBe("README.md");
+		expect(relativeToCwd(file, "/Users/you/work/repo")).toBeNull();
 
-	it("reads only local file:// URIs from a drop and decodes them", () => {
+		const plan = planDrop({
+			uriList: "file:///C:/users/Alex/work/repo/SHOT.png",
+			text: "file:///c:/users/alex/work/REPO/shot.png",
+			files: [{ name: "shot.png", type: "image/png" }],
+		});
+		expect(plan.images).toEqual([{ index: 0, path: "C:\\users\\Alex\\work\\repo\\SHOT.png" }]);
+		expect(plan.mentionPaths).toEqual([]);
+		expect(plan.unmatchedPaths).toEqual([]);
+	});
+
+	it("reads local file URLs and Windows UNC paths from a drop, decoding each path", () => {
 		const list = [
 			"# Finder",
 			"file:///Users/alice/work/relay/docs/release%20notes.md",
 			"file://localhost/Users/alice/a.txt",
-			"file://otherhost/Users/alice/b.txt",
+			"file://otherhost/share/a%20file.txt",
 			"https://example.com/x",
 		].join("\r\n");
-		expect(parseFileUris(list)).toEqual(["/Users/alice/work/relay/docs/release notes.md", "/Users/alice/a.txt"]);
+		expect(parseFileUris(list)).toEqual([
+			"/Users/alice/work/relay/docs/release notes.md",
+			"/Users/alice/a.txt",
+			"\\\\otherhost\\share\\a file.txt",
+		]);
 	});
 
 	it("keeps dragged prose that looks like a path out of the mentions", () => {

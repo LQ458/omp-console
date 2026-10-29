@@ -3,6 +3,7 @@ import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
 import { type MockDaemon, startMockDaemon } from "../dev/mock-daemon";
+import type { NewSessionBrowseResponse, NewSessionSuggestions, SetupResponse } from "@omp-console/protocol";
 
 describe("mock daemon static assets", () => {
 	let daemon: MockDaemon | undefined;
@@ -35,5 +36,22 @@ describe("mock daemon static assets", () => {
 		expect(await script.text()).toBe("export const ready = true;");
 		expect(stylesheet.headers.get("content-type")).toBe("text/css;charset=utf-8");
 		expect(await stylesheet.text()).toBe("main { display: block; }");
+	});
+
+	it("serves paired setup and project-folder routes when optional features are off", async () => {
+		daemon = await startMockDaemon({ port: 0, seed: false });
+		const [setup, suggestions, paths, browse] = await Promise.all([
+			fetch(`${daemon.url}/api/setup`),
+			fetch(`${daemon.url}/api/new-session/suggestions`),
+			fetch(`${daemon.url}/api/new-session/paths?q=sample`),
+			fetch(`${daemon.url}/api/new-session/browse?dir=%2FUsers%2Falice`),
+		]);
+		expect(setup.status).toBe(200);
+		expect((await setup.json() as SetupResponse).omp.found).toBe(true);
+		expect(suggestions.status).toBe(200);
+		expect((await suggestions.json() as NewSessionSuggestions).recent.length).toBeGreaterThan(0);
+		expect(paths.status).toBe(200);
+		expect(browse.status).toBe(200);
+		expect((await browse.json() as NewSessionBrowseResponse).entries.map(entry => entry.name)).toEqual(["code", "Documents", "projects"]);
 	});
 });

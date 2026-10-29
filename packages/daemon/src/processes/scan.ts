@@ -57,6 +57,38 @@ export function parsePsOutput(output: string): PsProcess[] {
 	return processes;
 }
 
+/** Parses the Windows CIM process snapshot; process-file handles are unavailable on Windows. */
+export function parseWin32ProcessOutput(output: string): PsProcess[] {
+	if (output.trim() === "") return [];
+	const parsed: unknown = JSON.parse(output);
+	const values = Array.isArray(parsed) ? parsed : [parsed];
+	const processes: PsProcess[] = [];
+	for (const value of values) {
+		if (typeof value !== "object" || value === null) continue;
+		const row = value as {
+			ProcessId?: unknown;
+			ParentProcessId?: unknown;
+			WorkingSetSize?: unknown;
+			CommandLine?: unknown;
+			CreationDate?: unknown;
+		};
+		const pid = parsePositiveInteger(String(row.ProcessId ?? ""));
+		const ppid = Number(row.ParentProcessId);
+		const rssBytes = Number(row.WorkingSetSize);
+		if (pid === undefined || !Number.isSafeInteger(ppid) || ppid < 0 || !Number.isSafeInteger(rssBytes) || rssBytes < 0) continue;
+		const startedAt = typeof row.CreationDate === "string" ? Date.parse(row.CreationDate) : 0;
+		processes.push({
+			pid,
+			ppid,
+			startedAt: Number.isFinite(startedAt) ? startedAt : 0,
+			rssBytes,
+			tty: "??",
+			command: typeof row.CommandLine === "string" ? row.CommandLine : "",
+		});
+	}
+	return processes;
+}
+
 export function parseLsofOutput(output: string): Map<number, LsofProcessFiles> {
 	const result = new Map<number, LsofProcessFiles>();
 	let pid: number | undefined;
@@ -84,7 +116,7 @@ export function parseLsofOutput(output: string): Map<number, LsofProcessFiles> {
 }
 
 function commandKind(command: string): ProcessKind | undefined {
-	const lower = command.toLowerCase();
+	const lower = process.platform === "win32" ? command.toLowerCase().replaceAll("\\", "/") : command.toLowerCase();
 	if (lower.includes("daemon_broker")) return "omp-broker";
 	if (lower.includes("lsp_mux")) return "omp-lsp";
 	if (lower.includes("__omp_worker_js_eval") || lower.includes("__omp_worker_eval")) return "omp-eval";
@@ -137,6 +169,7 @@ async function readCommand(command: string[]): Promise<string> {
 		stdout: "pipe",
 		stderr: "ignore",
 		signal: AbortSignal.timeout(COMMAND_TIMEOUT_MS),
+		windowsHide: process.platform === "win32",
 	});
 	const output = new Response(child.stdout).text();
 	const exitCode = await child.exited;
@@ -146,11 +179,20 @@ async function readCommand(command: string[]): Promise<string> {
 }
 
 async function defaultReadPs(): Promise<string> {
+	if (process.platform === "win32") {
+		return readCommand([
+			"powershell.exe",
+			"-NoProfile",
+			"-NonInteractive",
+			"-Command",
+			"Get-CimInstance Win32_Process | Select-Object ProcessId,ParentProcessId,WorkingSetSize,CommandLine,CreationDate | ConvertTo-Json -Compress",
+		]);
+	}
 	return readCommand(["ps", "-axo", "pid,ppid,lstart,rss,tty,command"]);
 }
 
 async function defaultReadLsof(pids: readonly number[]): Promise<string> {
-	if (pids.length === 0) return "";
+	if (pids.length === 0 || process.platform === "win32") return "";
 	return readCommand(["lsof", "-p", pids.join(","), "-Fpcfn"]);
 }
 
@@ -170,7 +212,7 @@ export async function scanOmpProcesses(
 	/** pid → start time of children of omp-console workers seen earlier; a reused pid (other start time) is not tracked. */
 	trackedPids: ReadonlyMap<number, number> = new Map(),
 ): Promise<ProcessInfo[]> {
-	const rows = parsePsOutput(await (sources.readPs ?? defaultReadPs)());
+	const rows = process.platform === "win32" ? parseWin32ProcessOutput(await (sources.readPs ?? defaultReadPs)()) : parsePsOutput(await (sources.readPs ?? defaultReadPs)());
 	const parentByPid = new Map(rows.map(row => [row.pid, row.ppid]));
 	const workerByPid = new Map(workers.filter(worker => worker.pid > 0).map(worker => [worker.pid, worker]));
 	const workerPids = new Set(workerByPid.keys());
@@ -200,7 +242,7 @@ export async function scanOmpProcesses(
 			startedAt: row.startedAt,
 			rssBytes: sumProcessTreeRss(rows, row.pid),
 			state: "idle",
-			...(details?.cwd === undefined ? {} : { cwd: details.cwd }),
+			...(details?.cwd === undefined && session?.cwd === undefined ? {} : { cwd: details?.cwd ?? session?.cwd }),
 			...(sessionId === undefined ? {} : { sessionId }),
 			...(sessionFile === undefined ? {} : { sessionFile }),
 			...(lastSessionWriteAt === undefined ? {} : { lastSessionWriteAt }),

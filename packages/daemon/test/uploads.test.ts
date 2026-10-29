@@ -44,12 +44,20 @@ describe("session uploads", () => {
 		expect(response.status).toBe(201);
 		expect(result.name).toBe("invoice.txt");
 		expect(result.size).toBe(bytes.byteLength);
-		expect(path.dirname(result.path)).toBe(path.join(canonicalState, "uploads", "session-1"));
+		const expectedDirectory = path.join(canonicalState, "uploads", "session-1");
+		if (process.platform === "win32") {
+			const pathKey = (candidate: string): string => fs.realpathSync.native(path.resolve(candidate)).toLowerCase();
+			expect(pathKey(path.dirname(result.path))).toBe(pathKey(expectedDirectory));
+		} else {
+			expect(path.dirname(result.path)).toBe(expectedDirectory);
+		}
 		expect(path.basename(result.path)).toMatch(/^\d{8}-\d{6}-invoice\.txt$/);
 		expect(fs.readFileSync(result.path)).toEqual(Buffer.from(bytes));
-		expect(fs.statSync(path.join(canonicalState, "uploads")).mode & 0o777).toBe(0o700);
-		expect(fs.statSync(path.dirname(result.path)).mode & 0o777).toBe(0o700);
-		expect(fs.statSync(result.path).mode & 0o777).toBe(0o600);
+		if (process.platform !== "win32") {
+			expect(fs.statSync(path.join(canonicalState, "uploads")).mode & 0o777).toBe(0o700);
+			expect(fs.statSync(path.dirname(result.path)).mode & 0o777).toBe(0o700);
+			expect(fs.statSync(result.path).mode & 0o777).toBe(0o600);
+		}
 	});
 
 	it("accepts the x-file-name header when the query name is absent", async () => {

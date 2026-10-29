@@ -6,6 +6,7 @@
 import type { FileSuggestion } from "@omp-console/protocol";
 import { fuzzyFind } from "@oh-my-pi/pi-natives";
 import * as path from "node:path";
+import { isWindows } from "./platform";
 
 export const DEFAULT_FILE_LIMIT = 50;
 export const MAX_FILE_LIMIT = 200;
@@ -21,6 +22,13 @@ export class FileSearchTimeoutError extends Error {
 /** True for a path that stays inside `cwd`: relative, no `..` segment, resolves under the cwd. */
 export function isInsideCwd(cwd: string, relative: string): boolean {
 	if (relative === "" || path.isAbsolute(relative) || relative.includes("\0")) return false;
+	if (isWindows) {
+		if (relative.split(/[\\/]/).some(segment => segment === "..")) return false;
+		const root = path.resolve(cwd);
+		const resolved = path.resolve(root, relative);
+		const fromRoot = path.relative(root, resolved);
+		return fromRoot === "" || (fromRoot !== ".." && !fromRoot.startsWith(`..${path.sep}`) && !path.isAbsolute(fromRoot));
+	}
 	if (relative.split("/").some(segment => segment === "..")) return false;
 	const resolved = path.resolve(cwd, relative);
 	return resolved === cwd || resolved.startsWith(cwd.endsWith(path.sep) ? cwd : `${cwd}${path.sep}`);

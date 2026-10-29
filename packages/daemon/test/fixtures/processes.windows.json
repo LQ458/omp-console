@@ -1,0 +1,30 @@
+[
+  {
+    "ProcessId": 100,
+    "ParentProcessId": 1,
+    "WorkingSetSize": 1228800,
+    "CommandLine": "C:\\Users\\runneradmin\\work\\omp-console\\packages\\session-host\\src\\main.ts",
+    "CreationDate": "2026-10-20T10:00:00"
+  },
+  {
+    "ProcessId": 101,
+    "ParentProcessId": 100,
+    "WorkingSetSize": 512000,
+    "CommandLine": "C:\\omp-console\\bin\\omp-helper.exe",
+    "CreationDate": "2026-10-20T10:01:00"
+  },
+  {
+    "ProcessId": 102,
+    "ParentProcessId": 101,
+    "WorkingSetSize": 256000,
+    "CommandLine": "C:\\Program Files\\tool\\tool.exe child",
+    "CreationDate": "2026-10-20T10:02:00"
+  },
+  {
+    "ProcessId": 200,
+    "ParentProcessId": 1,
+    "WorkingSetSize": 102400,
+    "CommandLine": "daemon_broker --detached",
+    "CreationDate": "2026-10-20T09:00:00"
+  }
+]

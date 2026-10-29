@@ -13,6 +13,7 @@ import * as fs from "node:fs/promises";
 import * as fsSync from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
+import { isWindows } from "../platform";
 import { DriftTracker } from "./drift";
 import {
 	assertNoSymlinkPath,
@@ -144,6 +145,7 @@ export async function readMovePublicKeyFile(
 	filePath = DEFAULT_MOVE_PUBLIC_KEY_FILE,
 	daemonUid = process.getuid?.(),
 ): Promise<Uint8Array | null> {
+	if (isWindows) return null;
 	let handle: fs.FileHandle;
 	try {
 		handle = await fs.open(filePath, "r");

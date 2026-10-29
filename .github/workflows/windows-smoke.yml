@@ -1,0 +1,230 @@
+name: Windows native smoke
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  native-smoke:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.3
+
+      - name: Isolate omp state
+        shell: pwsh
+        run: |
+          $env:PI_CODING_AGENT_DIR = Join-Path $env:RUNNER_TEMP ('pi-coding-agent-' + [guid]::NewGuid().ToString('N'))
+          $env:PI_CONFIG_DIR = Join-Path $env:RUNNER_TEMP ('omp-console-test-' + [guid]::NewGuid().ToString('N'))
+          New-Item -ItemType Directory -Force $env:PI_CODING_AGENT_DIR, $env:PI_CONFIG_DIR | Out-Null
+          "PI_CODING_AGENT_DIR=$env:PI_CODING_AGENT_DIR" >> $env:GITHUB_ENV
+          "PI_CONFIG_DIR=$env:PI_CONFIG_DIR" >> $env:GITHUB_ENV
+
+      - name: Install dependencies
+        shell: pwsh
+        run: bun install --frozen-lockfile
+
+      - name: Install published omp
+        shell: pwsh
+        run: bun install -g @oh-my-pi/pi-coding-agent@18.13.2
+
+      - name: Exercise native pairing, setup, and sessions
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          # *>&1: the installer reports through Write-Host (the information stream), which 2>&1 does not capture.
+          $plainOutput = @(& .\scripts\install.ps1 -Plain *>&1)
+          $plainOutput | ForEach-Object { Write-Host $_ }
+          if ($LASTEXITCODE -ne 0) { throw "Plain installer failed with exit code $LASTEXITCODE." }
+          $startCommand = $plainOutput | ForEach-Object { $_.ToString() } | Where-Object { $_ -match '^&\s+' -and $_ -match 'packages[\\/]daemon[\\/]src[\\/]main\.ts' } | Select-Object -Last 1
+          if (-not $startCommand) { throw 'The plain installer did not print the exact daemon start command.' }
+
+          $daemonStdout = Join-Path $env:RUNNER_TEMP 'omp-console-daemon.stdout.log'
+          $daemonStderr = Join-Path $env:RUNNER_TEMP 'omp-console-daemon.stderr.log'
+          $escapedCommand = $startCommand.Replace('"', '`"')
+          $workerArguments = '-NoProfile -NonInteractive -ExecutionPolicy Bypass -Command "' + $escapedCommand + '"'
+          $windowsPowerShell = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
+          $daemonProcess = Start-Process -FilePath $windowsPowerShell -ArgumentList $workerArguments `
+            -RedirectStandardOutput $daemonStdout -RedirectStandardError $daemonStderr -PassThru -WindowStyle Hidden
+          try {
+            $ready = $false
+            $deadline = [DateTime]::UtcNow.AddSeconds(45)
+            do {
+              try {
+                $status = Invoke-WebRequest -UseBasicParsing -Uri 'http://127.0.0.1:7490/api/pair/status' -TimeoutSec 3
+                if ($status.StatusCode -eq 200) { $ready = $true; break }
+              } catch { }
+              Start-Sleep -Seconds 1
+            } while ([DateTime]::UtcNow -lt $deadline)
+            if (-not $ready) { throw 'Plain daemon did not answer /api/pair/status within 45 seconds.' }
+
+            $shim = Join-Path $env:USERPROFILE '.local\bin\omp-console.cmd'
+            $null = @(& $shim pair 2>&1)
+            $pairExit = $LASTEXITCODE
+            if ($pairExit -ne 0) { throw "omp-console pair failed with exit code $pairExit." }
+            Write-Host 'Pairing code generated without logging it.'
+            $codeFile = Join-Path $env:USERPROFILE '.omp-console\pairing-code'
+            $pairCode = ([IO.File]::ReadAllText($codeFile)).Trim()
+            if (-not $pairCode) { throw 'omp-console pair did not write a pairing code.' }
+            $baseUrl = 'http://127.0.0.1:7490'
+            $pairBody = @{ code = $pairCode; label = 'windows-smoke' } | ConvertTo-Json -Compress
+            $paired = Invoke-WebRequest -UseBasicParsing -Uri "$baseUrl/api/pair" -Method Post -ContentType 'application/json' `
+              -Body $pairBody -SessionVariable deviceSession -TimeoutSec 10
+            if ($paired.StatusCode -ne 200) { throw "Pairing returned HTTP $($paired.StatusCode)." }
+            $deviceCookie = $deviceSession.Cookies.GetCookies([Uri]$baseUrl) | Where-Object { $_.Name -eq 'omc_device' } | Select-Object -First 1
+            if ($null -eq $deviceCookie) { throw 'Pairing response did not preserve the device cookie.' }
+
+            $setup = (Invoke-WebRequest -UseBasicParsing -Uri "$baseUrl/api/setup" -WebSession $deviceSession -TimeoutSec 15).Content | ConvertFrom-Json
+            if (-not $setup.omp.found) { throw 'GET /api/setup did not find the installed omp executable.' }
+            $sessions = (Invoke-WebRequest -UseBasicParsing -Uri "$baseUrl/api/sessions" -WebSession $deviceSession -TimeoutSec 15).Content | ConvertFrom-Json
+            if ($sessions.PSObject.Properties.Name -notcontains 'live' -or $sessions.PSObject.Properties.Name -notcontains 'recent') {
+              throw 'GET /api/sessions did not return the live and recent session lists.'
+            }
+
+            $project = Join-Path $env:RUNNER_TEMP 'omp-console-native-smoke-project'
+            New-Item -ItemType Directory -Path $project -Force | Out-Null
+            $createBody = @{ cwd = $project } | ConvertTo-Json -Compress
+            $created = Invoke-WebRequest -UseBasicParsing -Uri "$baseUrl/api/sessions" -Method Post -ContentType 'application/json' `
+              -Body $createBody -WebSession $deviceSession -TimeoutSec 120
+            if ($created.StatusCode -ne 201) { throw "Creating a session returned HTTP $($created.StatusCode)." }
+            $newSession = $created.Content | ConvertFrom-Json
+            if (-not $newSession.id) { throw 'POST /api/sessions did not return a session id.' }
+            $live = $false
+            $deadline = [DateTime]::UtcNow.AddSeconds(30)
+            do {
+              $currentSessions = (Invoke-WebRequest -UseBasicParsing -Uri "$baseUrl/api/sessions" -WebSession $deviceSession -TimeoutSec 15).Content | ConvertFrom-Json
+              if (@($currentSessions.live | Where-Object { $_.id -eq $newSession.id }).Count -gt 0) { $live = $true; break }
+              Start-Sleep -Seconds 1
+            } while ([DateTime]::UtcNow -lt $deadline)
+            if (-not $live) { throw "Created session $($newSession.id) did not appear in GET /api/sessions." }
+            Write-Host "Native Windows daemon, pairing, setup, and live session passed for $($newSession.id)."
+          } finally {
+            & (Join-Path $env:SystemRoot 'System32\taskkill.exe') /PID $daemonProcess.Id /T /F | Out-Null
+            if (Test-Path $daemonStdout) { Get-Content $daemonStdout | Write-Host }
+            if (Test-Path $daemonStderr) { Get-Content $daemonStderr | Write-Host }
+          }
+
+      - name: Try scheduled-task service
+        id: service
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $failure = $null
+          try {
+            & .\scripts\install.ps1 -Service
+            if ($LASTEXITCODE -ne 0) { throw "Service installer failed with exit code $LASTEXITCODE." }
+            $task = Get-ScheduledTask -TaskName omp-console -ErrorAction Stop
+            if ($task.State -eq 'Running') {
+              Stop-ScheduledTask -TaskName omp-console
+              $stopDeadline = [DateTime]::UtcNow.AddSeconds(15)
+              do {
+                Start-Sleep -Milliseconds 250
+                $task = Get-ScheduledTask -TaskName omp-console
+              } while ($task.State -eq 'Running' -and [DateTime]::UtcNow -lt $stopDeadline)
+              if ($task.State -eq 'Running') { throw 'The Scheduled Task did not stop before the restart check.' }
+            }
+            Start-ScheduledTask -TaskName omp-console
+            $ready = $false
+            $deadline = [DateTime]::UtcNow.AddSeconds(30)
+            do {
+              try {
+                $response = Invoke-WebRequest -UseBasicParsing -Uri 'http://127.0.0.1:7490/api/pair/status' -TimeoutSec 3
+                if ($response.StatusCode -eq 200) { $ready = $true; break }
+              } catch { }
+              Start-Sleep -Seconds 1
+            } while ([DateTime]::UtcNow -lt $deadline)
+            if (-not $ready) { throw 'Scheduled-task daemon did not answer /api/pair/status.' }
+            Write-Host 'Scheduled-task daemon answered /api/pair/status.'
+            'result=passed' >> $env:GITHUB_OUTPUT
+          } catch {
+            $failure = ($_.Exception.Message -replace '\s+', ' ').Trim()
+          }
+          if ($failure) {
+            $taskInfo = Get-ScheduledTaskInfo -TaskName omp-console -ErrorAction SilentlyContinue
+            $lastResult = if ($null -ne $taskInfo) { [long]$taskInfo.LastTaskResult } else { -1 }
+            Write-Host ('Task state: {0}; LastTaskResult: 0x{1:X8}; LastRunTime: {2}' -f (Get-ScheduledTask -TaskName omp-console -ErrorAction SilentlyContinue).State, $lastResult, $taskInfo.LastRunTime)
+            $daemonLog = Join-Path $env:LOCALAPPDATA 'omp-console\logs\daemon.log'
+            if (Test-Path $daemonLog) { Write-Host '--- daemon.log (tail)'; Get-Content $daemonLog -Tail 60 | Write-Host } else { Write-Host "No daemon log at $daemonLog" }
+            $stateDir = Join-Path $env:USERPROFILE '.omp-console'
+            Write-Host '--- state ACLs'
+            & icacls $stateDir | Write-Host
+            & icacls (Join-Path $stateDir 'env') | Write-Host
+            Write-Host ('--- installer user: {0}; task principal: {1} ({2})' -f [Security.Principal.WindowsIdentity]::GetCurrent().Name, (Get-ScheduledTask -TaskName omp-console).Principal.UserId, (Get-ScheduledTask -TaskName omp-console).Principal.RunLevel)
+            $unsupportedResults = @(2147943712, 2147943726, 2147943785, 2147946720)
+            $hostRefusedLogonTask = ($unsupportedResults -contains $lastResult) -or
+              ($failure -match '(?i)0x80070520|0x8007052e|0x80070569|0x800710e0|logon session|logon type|log on type|refused the request')
+            if ($hostRefusedLogonTask) {
+              $reason = "Hosted runner refused the per-user logon task (LastTaskResult=$lastResult): $failure"
+              Write-Host "SKIPPED: $reason"
+              "result=skipped" >> $env:GITHUB_OUTPUT
+              "reason=$reason" >> $env:GITHUB_OUTPUT
+              exit 0
+            }
+            throw $failure
+          }
+
+      - name: Report scheduled-task support
+        if: steps.service.outputs.result == 'skipped'
+        shell: pwsh
+        env:
+          TASK_SKIP_REASON: ${{ steps.service.outputs.reason }}
+        run: |
+          Write-Host "SKIPPED: $env:TASK_SKIP_REASON"
+      - name: Remove installed service and stop any remaining daemon
+        if: always()
+        shell: pwsh
+        run: |
+          try {
+            if (Test-Path .\scripts\install.ps1) {
+              & .\scripts\install.ps1 -Uninstall
+              if ($LASTEXITCODE -ne 0) { Write-Warning "Installer cleanup exited $LASTEXITCODE." }
+            }
+          } catch {
+            Write-Warning "Installer cleanup failed: $($_.Exception.Message)"
+          }
+          Stop-ScheduledTask -TaskName omp-console -ErrorAction SilentlyContinue
+          Unregister-ScheduledTask -TaskName omp-console -Confirm:$false -ErrorAction SilentlyContinue
+          $stateDir = Join-Path $env:USERPROFILE '.omp-console'
+          $runnerScript = Join-Path $env:GITHUB_WORKSPACE 'scripts\windows\run-daemon.ps1'
+          $remaining = Get-CimInstance Win32_Process -ErrorAction SilentlyContinue | Where-Object {
+            $_.CommandLine -and (
+              ($_.CommandLine.Contains('packages\daemon\src\main.ts') -and $_.CommandLine.Contains($stateDir)) -or
+              $_.CommandLine.Contains($runnerScript)
+            )
+          }
+          foreach ($process in $remaining) {
+            & (Join-Path $env:SystemRoot 'System32\taskkill.exe') /PID $process.ProcessId /T /F | Out-Null
+          }
+
+      - name: Collect Windows logs
+        if: always()
+        shell: pwsh
+        run: |
+          # upload-artifact needs one common root, so gather the logs under the workspace first.
+          $target = Join-Path $env:GITHUB_WORKSPACE 'smoke-logs'
+          New-Item -ItemType Directory -Path $target -Force | Out-Null
+          $sources = @(
+            (Join-Path $env:RUNNER_TEMP 'omp-console-daemon.stdout.log'),
+            (Join-Path $env:RUNNER_TEMP 'omp-console-daemon.stderr.log'),
+            (Join-Path $env:LOCALAPPDATA 'omp-console\logs\daemon.log'),
+            (Join-Path $env:LOCALAPPDATA 'omp-console\logs\daemon.log.old')
+          )
+          foreach ($source in $sources) { if (Test-Path $source) { Copy-Item -LiteralPath $source -Destination $target } }
+
+      - name: Upload Windows logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-native-smoke-logs
+          path: smoke-logs/
+          if-no-files-found: ignore

@@ -6,6 +6,7 @@ import type { DecisionAnswer, DecisionModel, DecisionQuestion, DecisionRequest, 
 import type { PersistedSession } from "../src/history/ports";
 import type { LiveConversation, LibrarianPorts } from "../src/librarian/ports";
 import { createLibrarianRoutes, type LibrarianRoutes } from "../src/librarian/routes";
+import { suggestPaths } from "../src/librarian/paths";
 import { makeTmp } from "./helpers";
 
 const temporaryRoots: string[] = [];
@@ -535,5 +536,24 @@ describe("librarian routes", () => {
 		expect((await request(app.routes, "GET", "/api/cards?limit=0")).status).toBe(400);
 		expect((await request(app.routes, "POST", "/api/cards/missing/title", { title: " " })).status).toBe(400);
 		expect((await request(app.routes, "POST", "/api/cards/missing/title/undo")).status).toBe(404);
+	});
+});
+
+describe("Windows path suggestions", () => {
+	it.skipIf(process.platform !== "win32")("resolves drive-letter and ~\\ paths relative to the home directory", async () => {
+		const home = temporaryDirectory();
+		const child = path.join(home, "child");
+		fs.mkdirSync(child);
+
+		const homeRelative = await suggestPaths("~\\child", { projectRoots: [] }, home);
+		expect(homeRelative.typedPath).toBe(child);
+		expect(homeRelative.matches).toContainEqual({ path: child, exists: true });
+
+		const absolute = await suggestPaths(child, { projectRoots: [] }, home);
+		expect(absolute.matches).toContainEqual({ path: child, exists: true });
+	});
+	it.skipIf(process.platform !== "win32")("does not reinterpret an absolute UNC folder as a child of the home directory", async () => {
+		const suggestions = await suggestPaths("\\\\server\\share\\folder", { projectRoots: [] }, temporaryDirectory());
+		expect(suggestions).toEqual({ matches: [] });
 	});
 });

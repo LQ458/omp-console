@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import type { AgendaToday, CardsResponse, NewSessionSuggestions, PathSuggestions, ReturnBrief, SessionSummary } from "@omp-console/protocol";
+import type { AgendaToday, CardsResponse, NewSessionBrowseResponse, NewSessionSuggestions, PathSuggestions, ReturnBrief, SessionSummary } from "@omp-console/protocol";
 import { createLibrarianMock, type LibrarianMock } from "../dev/mock-librarian";
 
 function session(id: string, cwd: string, lastActivityAt: number, extra: Partial<SessionSummary> = {}): SessionSummary {
@@ -87,7 +87,42 @@ describe("librarian mock routes", () => {
 		const pathResponse = await call(mock, "/new-session/paths?q=brand-new");
 		const paths = (await pathResponse.json()) as PathSuggestions;
 		expect(paths.matches).toEqual([]);
-		expect(paths.create?.path).toBe("/Users/alice/Projects/brand-new");
+		expect(paths.create?.path).toBe("/Users/alice/projects/brand-new");
+	});
+
+	it("browses the demo home, nested projects, and an empty folder", async () => {
+		const mock = createLibrarianMock({ sessions: () => ({ live: [], recent: [] }) });
+		const suggestions = (await (await call(mock, "/new-session/suggestions")).json()) as NewSessionSuggestions;
+		expect(suggestions.recent.map(project => project.cwd)).toEqual([
+			"/Users/alice/projects/api",
+			"/Users/alice/projects/app",
+		]);
+
+		const home = (await (await call(mock, "/new-session/browse")).json()) as NewSessionBrowseResponse;
+		expect(home).toMatchObject({
+			dir: "/Users/alice",
+			home: "/Users/alice",
+			entries: [
+				{ name: "code", path: "/Users/alice/code" },
+				{ name: "Documents", path: "/Users/alice/Documents" },
+				{ name: "projects", path: "/Users/alice/projects" },
+			],
+			truncated: false,
+		});
+		expect(home.parent).toBeUndefined();
+
+		const projectFolders = (await (await call(mock, "/new-session/browse?dir=%2FUsers%2Falice%2Fprojects")).json()) as NewSessionBrowseResponse;
+		expect(projectFolders.entries.map(entry => entry.name)).toEqual(["api", "app"]);
+		const appFolders = (await (await call(mock, "/new-session/browse?dir=%2FUsers%2Falice%2Fprojects%2Fapp")).json()) as NewSessionBrowseResponse;
+		expect(appFolders.entries.map(entry => entry.name)).toEqual(["docs", "src"]);
+
+		const empty = await call(mock, "/new-session/browse?dir=%2FUsers%2Falice%2FDocuments");
+		const emptyResponse = (await empty.json()) as NewSessionBrowseResponse;
+		expect(emptyResponse.entries).toEqual([]);
+		expect(emptyResponse.parent).toBe("/Users/alice");
+		const missing = await call(mock, "/new-session/browse?dir=%2FUsers%2Falice%2Fmissing");
+		expect(missing.status).toBe(404);
+		expect((await missing.json()).error).toContain("Couldn't list this folder.");
 	});
 
 	it("filters the brief with the caller's cursor and leaves the old seen route unavailable", async () => {

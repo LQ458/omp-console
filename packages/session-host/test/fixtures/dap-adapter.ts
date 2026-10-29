@@ -26,7 +26,15 @@ function handle(request: Record<string, unknown>): void {
 	const command = request.command;
 	switch (command) {
 		case "initialize":
-			if (process.env.OMP_CONSOLE_DAP_FIXTURE_HOLD_INITIALIZE === "1") return;
+			if (process.env.OMP_CONSOLE_DAP_FIXTURE_HOLD_INITIALIZE === "1") {
+				Bun.spawn([process.execPath, "-e", "setTimeout(()=>{}, 1e9)", "omp-console-dap-fixture-child"], {
+					stdin: "ignore",
+					stdout: "ignore",
+					stderr: "ignore",
+					windowsHide: true,
+				});
+				return;
+			}
 			respond(request, {
 				supportsConfigurationDoneRequest: true,
 				supportsEvaluateForHovers: true,

@@ -42,6 +42,7 @@ export type SessionSidebarApi = Pick<
 	| "sessionTranscript"
 	| "claudeImportSummary"
 	| "newSessionSuggestions"
+	| "browseNewSession"
 	| "pathSuggestions"
 	| "getOvernightTemplate"
 	| "getOvernightPreflight"
@@ -885,7 +886,7 @@ export function SessionSidebar(props: SessionSidebarProps): ReactNode {
 	);
 
 	return (
-		<nav className="dk-side" data-variant={variant} aria-label="sessions">
+		<nav className="dk-side" data-variant={variant} aria-label="sessions" data-tour="sessions">
 			<div className="dk-side-head">
 				<span className="dk-side-title">Sessions</span>
 				<span className="dk-side-tools">
@@ -910,6 +911,7 @@ export function SessionSidebar(props: SessionSidebarProps): ReactNode {
 						<FolderGit2 size={14} />
 					</button>
 					<button
+						data-tour="new-session"
 						type="button"
 						className={composing ? "sh-btn sh-btn-icon sh-btn-on" : "sh-btn sh-btn-icon"}
 						title="new session"
@@ -950,7 +952,6 @@ export function SessionSidebar(props: SessionSidebarProps): ReactNode {
 				<NewSessionPicker
 					api={api}
 					overnightEnabled={props.overnightEnabled === true}
-					librarianEnabled={props.librarianEnabled === true}
 					machines={machines}
 					initialPath={pickerPath}
 					busy={busy}

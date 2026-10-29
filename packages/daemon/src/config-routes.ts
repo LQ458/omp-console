@@ -33,7 +33,7 @@ export interface DaemonConfigRoutesOptions {
 	machineId: string;
 	/** False on hosts where computer use cannot work (everything except macOS). */
 	computerUseSupported: boolean;
-	/** Startup's peer credential check (token files must be 0600 regular files holding a device token); throws on failure. */
+	/** Startup enforces regular token files with mode 0600 on POSIX; Windows uses the state directory ACL. */
 	checkPeers: (peers: readonly ConfiguredPeer[]) => Promise<void>;
 	supervisor: Supervisor;
 	restartSupported: boolean;

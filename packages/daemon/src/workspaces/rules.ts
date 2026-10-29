@@ -3,6 +3,7 @@ import * as vcs from "@oh-my-pi/pi-natives/vcs";
 import * as fs from "node:fs/promises";
 import * as fsConstants from "node:fs";
 import * as path from "node:path";
+import { isWindows } from "../platform";
 import { assertNoSymlinkComponents, atomicWriteFile, UnsafeWorkspacePathError } from "./files";
 
 export const MAX_RULE_FILE_BYTES = 256 * 1024;
@@ -45,7 +46,7 @@ function rulePath(raw: string, visibility: RuleFileWrite["visibility"]): string 
 async function readFileBounded(filePath: string): Promise<string> {
 	let handle: fs.FileHandle;
 	try {
-		handle = await fs.open(filePath, fsConstants.constants.O_RDONLY | fsConstants.constants.O_NOFOLLOW);
+		handle = await fs.open(filePath, fsConstants.constants.O_RDONLY | (isWindows ? 0 : fsConstants.constants.O_NOFOLLOW));
 	} catch (error) {
 		if (typeof error === "object" && error !== null && "code" in error && error.code === "ENOENT") {
 			throw new WorkspaceRuleError("not-found", "rule file not found");
@@ -53,7 +54,8 @@ async function readFileBounded(filePath: string): Promise<string> {
 		throw error;
 	}
 	try {
-		const stat = await handle.stat();
+		const stat = isWindows ? await fs.lstat(filePath) : await handle.stat();
+		if (isWindows && (!stat.isFile() || stat.isSymbolicLink())) throw new WorkspaceRuleError("bad-request", "rule path must name a regular file");
 		if (stat.size > MAX_RULE_FILE_BYTES) throw new WorkspaceRuleError("bad-request", "rule file exceeds 256 KB");
 		return await handle.readFile("utf8");
 	} finally {
@@ -169,7 +171,7 @@ export async function writeWorkspaceRule(root: string, rawPath: string, input: R
 		if (stat.isSymbolicLink()) throw new WorkspaceRuleError("bad-request", "symlink rule files are not allowed");
 		if (!stat.isFile()) throw new WorkspaceRuleError("bad-request", "rule path must name a file");
 		if (stat.size > MAX_RULE_FILE_BYTES) throw new WorkspaceRuleError("bad-request", "rule file exceeds 256 KB");
-		mode = stat.mode & 0o777;
+		if (!isWindows) mode = stat.mode & 0o777;
 	} catch (error) {
 		if (!(typeof error === "object" && error !== null && "code" in error && error.code === "ENOENT")) throw error;
 	}

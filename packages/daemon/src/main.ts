@@ -13,14 +13,17 @@
  *                               [--quick-ask-source <siyuan|repo|web|history>]...
  *                               [--peers on|off] [--openrouter-decisions on|off] [--computer-use on|off] [--overnight on|off]
  *                               [--machine <id>[=<name>]] [--peer <id>=<https url>]...
- *                               [--peer-token-file <id>=<0600 path>]...
+ *                               [--peer-token-file <id>=<private file>]...
  *
  * Pair and open a browser: `omp-console pair|open [--state-dir <dir>] [--port <port>]`; inspect a service with `omp-console status|logs`.
 
  * Binds 127.0.0.1 only. SIGTERM/SIGINT stop every worker first, then exit with 143/130. Logs to stderr; prints one JSON line `{"t":"listening","port":N}` on stdout when ready.
  */
+import { createReadStream } from "node:fs";
+import { createInterface } from "node:readline";
 import * as os from "node:os";
 import * as path from "node:path";
+import { isWindows, openUrl, windowsLogFile } from "./platform";
 import * as postmortem from "@oh-my-pi/pi-utils/postmortem";
 import type { OptionalFeatureName, QuickAskSource } from "@omp-console/protocol";
 import { type ConfigFlagField, type ConfiguredPeer, loadDaemonConfigFile, type DaemonConfigFile, type FeatureSettings, RESERVED_MACHINE_IDS } from "./config";
@@ -42,7 +45,7 @@ interface CliConfig {
 	knowledgeRoot: string | undefined;
 	projectRoots: string[];
 	scheduleFile: string | undefined;
-	/** tasks-hub checkout; its `.venv/bin/python -m hub.board_io` serves the agenda (HUB_* come from the environment). */
+	/** Tasks-hub checkout; `.venv/bin/python` on POSIX or `.venv\\Scripts\\python.exe` on Windows serves the agenda (HUB_* come from the environment). */
 	agendaHub: string | undefined;
 	features: FeatureSettings;
 	featureOverrides: Partial<Record<OptionalFeatureName, boolean>>;
@@ -312,26 +315,12 @@ function consoleOptions(command: string, args: readonly string[]): { stateDir: s
 	};
 }
 
-function openBrowser(url: string): boolean {
-	const command = process.platform === "darwin"
-		? ["open", url]
-		: process.platform === "linux" && (process.env.DISPLAY || process.env.WAYLAND_DISPLAY)
-			? ["xdg-open", url]
-			: undefined;
-	if (!command) return false;
-	try {
-		return Bun.spawnSync(command, { stdout: "ignore", stderr: "ignore" }).exitCode === 0;
-	} catch {
-		return false;
-	}
-}
-
 async function requestFreshPairing(command: "pair" | "open", args: readonly string[]): Promise<void> {
 	const { stateDir, port } = consoleOptions(command, args);
 	try {
 		const pairing = await requestPairingCode(stateDir);
 		const url = pairingLink(port, pairing.code);
-		const browserOpened = command === "open" && openBrowser(url);
+		const browserOpened = command === "open" && openUrl(url);
 		if (process.stdout.isTTY) {
 			const remainingMinutes = Math.max(1, Math.ceil((pairing.expiresAt - Date.now()) / 60_000));
 			process.stdout.write(`pairing code: ${pairing.code} (valid ${remainingMinutes} min)\nPair this browser: ${url}\n`);
@@ -361,6 +350,20 @@ async function showStatus(args: readonly string[]): Promise<void> {
 
 async function showLogs(): Promise<void> {
 	let command: string[];
+	if (isWindows) {
+		const file = windowsLogFile();
+		if (!(await Bun.file(file).exists())) {
+			process.stdout.write(`No Windows daemon log exists at ${file} yet.\n`);
+			return;
+		}
+		const lines: string[] = [];
+		for await (const line of createInterface({ input: createReadStream(file), crlfDelay: Infinity })) {
+			if (lines.length === 100) lines.shift();
+			lines.push(line);
+		}
+		if (lines.length > 0) process.stdout.write(`${lines.join("\n")}\n`);
+		return;
+	}
 	if (process.platform === "linux") {
 		command = ["journalctl", "--user", "-u", "omp-console.service", "-n", "100", "--no-pager"];
 	} else if (process.platform === "darwin") {
@@ -433,7 +436,7 @@ const daemon = await startDaemon({
 	agendaHub:
 		config.agendaHub === undefined
 			? undefined
-			: { python: path.join(config.agendaHub, ".venv", "bin", "python"), cwd: config.agendaHub, env: hubEnv() },
+			: { python: path.join(config.agendaHub, ".venv", isWindows ? "Scripts" : "bin", isWindows ? "python.exe" : "python"), cwd: config.agendaHub, env: hubEnv() },
 	features: config.features,
 	quickAskSources: config.quickAskSources,
 	backgroundModels: config.features.librarian
@@ -471,6 +474,23 @@ activeDaemon = daemon;
 // omp's postmortem module owns SIGINT/SIGTERM/SIGHUP (exit codes 130/143/129) and fatal errors; its cleanup
 // pass awaits this callback before the process exits, so every worker is stopped on any of those paths.
 postmortem.register("omp-console-daemon", () => daemon.stop());
+
+// The Windows runner (scripts/windows/run-daemon.ps1) cannot clean up when Stop-ScheduledTask or a sign-out ends it,
+// and an orphaned daemon would keep port 7490 from the next runner; it passes its PID so the daemon follows it out.
+const parentPid = Number(process.env.OMP_CONSOLE_PARENT_PID);
+// Workers and anything started from a session inherit this environment; only this daemon follows the runner.
+delete process.env.OMP_CONSOLE_PARENT_PID;
+if (Number.isSafeInteger(parentPid) && parentPid > 0) {
+	const parentWatch = setInterval(() => {
+		try {
+			process.kill(parentPid, 0);
+		} catch {
+			clearInterval(parentWatch);
+			log(`supervising process ${parentPid} is gone; stopping`);
+			void daemon.stop().finally(() => process.exit(0));
+		}
+	}, 5_000);
+}
 
 log(`omp-console daemon listening on ${daemon.url} (state ${config.stateDir}, web ${config.webDir})`);
 process.stdout.write(`${JSON.stringify({ t: "listening", port: daemon.port })}\n`);

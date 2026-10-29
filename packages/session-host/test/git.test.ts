@@ -5,6 +5,7 @@ import * as path from "node:path";
 import type { VcsGitRepo } from "@oh-my-pi/pi-natives";
 import * as vcs from "@oh-my-pi/pi-natives/vcs";
 import { GitService } from "../src/git";
+import { cloneGitRepositoryWithAutocrlfOff } from "./host-test-helpers";
 
 const temporaryRoots: string[] = [];
 
@@ -18,7 +19,7 @@ async function temporaryRepository(): Promise<{ root: string; repository: VcsGit
 	const clonePath = path.join(root, "repo");
 	const source = vcs.git(import.meta.dir);
 	if (!source) throw new Error("the test workspace must be a Git checkout");
-	await vcs.clone(source.info().repoRoot, clonePath);
+	cloneGitRepositoryWithAutocrlfOff(source.info().repoRoot, clonePath);
 	const repository = vcs.requireGit(clonePath);
 	await repository.configSet("user.name", "omp console test");
 	await repository.configSet("user.email", "omp-console-test@example.invalid");
@@ -97,4 +98,38 @@ test("Git service scopes file operations, stages one hunk at a time, commits loc
 	expect(committed.clean).toBe(true);
 	expect(committed.headCommit?.subject).toBe("Deck local commit");
 	expect(committed.commitFiles.some(file => file.path === filePath)).toBe(true);
+}, 30_000);
+
+test.skipIf(process.platform !== "win32")("Git diffs and hunk staging handle core.autocrlf=true worktrees", async () => {
+	const { root, repository } = await temporaryRepository();
+	const filePath = "deck-git-autocrlf-fixture.txt";
+	const absolutePath = path.join(root, filePath);
+	const original = `${Array.from({ length: 30 }, (_, index) => `line ${index + 1}`).join("\n")}\n`;
+	await Bun.write(absolutePath, original);
+	await repository.stageFiles([filePath]);
+	await repository.commitCreate("autocrlf fixture baseline", {});
+	await repository.configSet("core.autocrlf", "true");
+
+	const checkout = Bun.spawnSync(["git", "-C", root, "checkout-index", "--force", "--", filePath], {
+		stdout: "ignore",
+		stderr: "pipe",
+		windowsHide: true,
+	});
+	if (!checkout.success) throw new Error(`Git checkout-index failed: ${checkout.stderr.toString()}`);
+	const checkedOut = await fs.readFile(absolutePath, "utf8");
+	expect(checkedOut).toBe(original.replace(/\n/g, "\r\n"));
+	const edited = checkedOut.replace("line 2\r\n", "changed two\r\n").replace("line 28\r\n", "changed twenty-eight\r\n");
+	await fs.writeFile(absolutePath, edited);
+
+	const service = new GitService(root);
+	const diff = await service.diff(filePath, "unstaged");
+	if (diff.kind !== "text") throw new Error("fixture text should produce a line diff");
+	expect(diff.hunks).toHaveLength(2);
+	expect(diff.hunks[0]?.lines).toContainEqual({ kind: "del", text: "line 2" });
+	expect(diff.hunks[0]?.lines).toContainEqual({ kind: "add", text: "changed two" });
+	expect(diff.hunks[1]?.lines).toContainEqual({ kind: "del", text: "line 28" });
+	expect(diff.hunks[1]?.lines).toContainEqual({ kind: "add", text: "changed twenty-eight" });
+	const staged = await service.applyHunk("stage", filePath, "unstaged", 0, diff.hunks[0]!.patchHash);
+	expect(staged.staged.some(file => file.path === filePath)).toBe(true);
+	expect(staged.unstaged.some(file => file.path === filePath)).toBe(true);
 }, 30_000);

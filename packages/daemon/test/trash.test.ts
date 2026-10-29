@@ -42,4 +42,26 @@ describe("moveSessionToTrash", () => {
 		expect(fs.existsSync(path.join(target, "b", "Sub.jsonl"))).toBe(true);
 		expect(fs.readdirSync(store)).toEqual([]);
 	});
+
+	it("keeps the session and sibling folder together when the state-dir Trash is on another volume", async () => {
+		const store = makeTmp("deck-cross-volume-store-");
+		const stateDir = makeTmp("deck-cross-volume-state-");
+		const file = session(store, "cross-volume.jsonl", true);
+		const ownTrash = path.join(stateDir, "trash");
+		const target = await moveSessionToTrash(file, {
+			stateDir,
+			systemTrashDir: null,
+			now,
+			rename: async (source, destination) => {
+				if (destination.startsWith(`${ownTrash}${path.sep}`)) throw Object.assign(new Error("cross-device"), { code: "EXDEV" });
+				await fs.promises.rename(source, destination);
+			},
+		});
+
+		expect(target).toBe(path.join(store, ".omp-console-trash", "20261025-163005-cross-volume"));
+		expect(fs.readFileSync(path.join(target, "cross-volume.jsonl"), "utf8")).toBe("cross-volume.jsonl\n");
+		expect(fs.readFileSync(path.join(target, "cross-volume", "Sub.jsonl"), "utf8")).toBe("sub\n");
+		expect(fs.existsSync(file)).toBe(false);
+		expect(fs.existsSync(path.join(store, "cross-volume"))).toBe(false);
+	});
 });

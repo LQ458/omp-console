@@ -317,7 +317,8 @@ describe("safe move", () => {
 		expect(fs.readFileSync(path.join(fixture.projectsRoot, "tool", "existing.txt"), "utf8")).toBe("keep\n");
 	});
 
-	it("excludes dependency directories, secrets, hardlinks and enforces both copy caps", async () => {
+	// Project moves are macOS-only (signed native confirmation); Windows never reaches the copy step.
+	it.skipIf(process.platform === "win32")("excludes dependency directories, secrets, hardlinks and enforces both copy caps", async () => {
 		const source = tempDir();
 		writeFile(source, "package.json", "{}\n");
 		writeFile(source, ".env.local", "secret\n");
@@ -353,7 +354,13 @@ describe("safe move", () => {
 		expect(manyScan.excluded[0]?.reason).toBe("too-large");
 	}, 30_000);
 
-	it("requires the Mac app's Ed25519 signature, aborts and freezes before copying, and confirms idempotently", async () => {
+	it.skipIf(process.platform !== "win32")("reports that project moves require the macOS app on Windows", async () => {
+		const routes = createSafetyRoutes(new FakeSafetyPorts(), tempDir());
+		const response = await routeRequest(routes, "GET", "/api/moves");
+		expect(response.status).toBe(409);
+		expect(await response.text()).toContain("Project moves require the macOS app");
+	});
+	it.skipIf(process.platform === "win32")("requires the Mac app's Ed25519 signature, aborts and freezes before copying, and confirms idempotently (macOS-only route)", async () => {
 		const fixture = await projectFixture({ sourceFiles: {
 			"package.json": "{\"name\":\"tool\"}\n",
 			"src/index.ts": "export const source = true;\n",
@@ -573,7 +580,7 @@ describe("safe move", () => {
 		expect(fixture.ports.created).toHaveLength(1);
 		expect(fixture.ports.edges).toEqual([{ from: SESSION_ID, to: "new-1", kind: "move" }]);
 	});
-	it("refuses move public keys that are writable by others or owned by another user", async () => {
+	it.skipIf(process.platform === "win32")("refuses move public keys writable by others or owned by another user (POSIX ownership/mode check)", async () => {
 		const keyFile = path.join(tempDir(), "public-key");
 		fs.writeFileSync(keyFile, Buffer.from(MOVE_KEY).toString("base64url"), { mode: 0o600 });
 		const daemonUid = process.getuid?.();

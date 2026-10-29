@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it } from "bun:test";
 import type { OvernightState, OvernightTemplate, SessionSummary } from "@omp-console/protocol";
 import * as fs from "node:fs";
+import * as os from "node:os";
+import * as path from "node:path";
 import type { FeatureSettings } from "../src/config";
 import { pairDaemon, startTestDaemon, stopTestDaemons, type TestDaemon, type TestDaemonOptions } from "./harness";
 
@@ -104,9 +106,9 @@ describe("overnight HTTP API", () => {
 	}, 15_000);
 
 	it("blocks before sending the first prompt when model authentication is unavailable", async () => {
-		const logDirectory = fs.mkdtempSync("/tmp/omp-console-overnight-no-auth-");
+		const logDirectory = fs.mkdtempSync(path.join(os.tmpdir(), "omp-console-overnight-no-auth-"));
 		try {
-			const requestLog = `${logDirectory}/requests.jsonl`;
+			const requestLog = path.join(logDirectory, "requests.jsonl");
 			const daemon = await startOvernightDaemon({
 				workerFlags: ["--fail-send-prompt", "--dump-requests", requestLog],
 				modelAvailability: async model => ({

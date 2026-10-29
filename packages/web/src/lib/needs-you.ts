@@ -8,6 +8,7 @@
  */
 import type { SessionState, SessionSummary } from "@omp-console/protocol";
 import type { CollabUiRequest } from "@oh-my-pi/pi-wire";
+import { basename } from "./native-path";
 
 export type NeedsYouKind = "ask" | "approval";
 
@@ -61,8 +62,7 @@ function isAwaiting(session: SessionSummary): boolean {
 function titleOf(session: SessionSummary): string {
 	const title = session.title?.trim();
 	if (title) return title;
-	const trimmed = session.cwd.replace(/\/+$/, "");
-	return trimmed.slice(trimmed.lastIndexOf("/") + 1) || trimmed || "session";
+	return basename(session.cwd) || "session";
 }
 
 export function selectNeedsYou(live: readonly SessionSummary[], open: OpenSessionView): NeedsYouItem[] {

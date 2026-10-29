@@ -1,6 +1,7 @@
 import { createHash, randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { isWindows } from "./platform";
 import { atomicWriteFile } from "./workspaces/files";
 
 const TOKEN_BYTES = 32;
@@ -122,7 +123,7 @@ export class DeviceAuthStore {
 		await fs.mkdir(stateDir, { recursive: true, mode: 0o700 });
 		const directory = await fs.lstat(stateDir);
 		if (!directory.isDirectory() || directory.isSymbolicLink()) throw new Error("device state path must be a real directory");
-		await fs.chmod(stateDir, 0o700);
+		if (!isWindows) await fs.chmod(stateDir, 0o700);
 		const store = new DeviceAuthStore(stateDir, now);
 		try {
 			const file = await fs.lstat(store.#filePath);
@@ -133,7 +134,7 @@ export class DeviceAuthStore {
 				if (store.#devices.has(device.id)) throw new Error("devices.json contains a duplicate device id");
 				store.#devices.set(device.id, device);
 			}
-			await fs.chmod(store.#filePath, 0o600);
+			if (!isWindows) await fs.chmod(store.#filePath, 0o600);
 		} catch (error) {
 			if (!isMissing(error)) throw error;
 		}

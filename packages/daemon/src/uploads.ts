@@ -3,6 +3,7 @@ import * as fsSync from "node:fs";
 import * as path from "node:path";
 import { Buffer } from "node:buffer";
 import { assertNoSymlinkPath, isEnoent, MoveFileError } from "./safety/files";
+import { isWindows } from "./platform";
 
 export const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
 const UPLOAD_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
@@ -112,7 +113,7 @@ async function ensureUploadDirectory(directory: string): Promise<void> {
 	await assertSafePath(directory, false);
 	const info = await fs.lstat(directory);
 	if (info.isSymbolicLink() || !info.isDirectory()) throw new UploadFault(400, "bad-request", "upload path is not a directory");
-	await fs.chmod(directory, 0o700);
+	if (!isWindows) await fs.chmod(directory, 0o700);
 }
 
 /** Removes expired regular files without following any directory or file symlink. */
@@ -175,7 +176,7 @@ async function writeUpload(req: Request, url: URL, stateDir: string, sessionId: 
 			try {
 				handle = await fs.open(
 					candidate,
-					fsSync.constants.O_WRONLY | fsSync.constants.O_CREAT | fsSync.constants.O_EXCL | fsSync.constants.O_NOFOLLOW,
+					fsSync.constants.O_WRONLY | fsSync.constants.O_CREAT | fsSync.constants.O_EXCL | (isWindows ? 0 : fsSync.constants.O_NOFOLLOW),
 					0o600,
 				);
 				filePath = candidate;

@@ -27,14 +27,14 @@ async function render(script: string, template: string, home: string): Promise<s
 }
 
 describe("service environment rendering", () => {
-	it("renders systemd's optional environment file at the user's state directory", async () => {
+	it.skipIf(process.platform === "win32")("renders systemd's optional environment file at the user's state directory (systemd-only)", async () => {
 		const home = path.join(os.tmpdir(), "omp console user");
 		const unit = await render("render-systemd.ts", "ops/systemd/omp-console.service.template", home);
 		expect(unit).toContain(`EnvironmentFile=-${home.replaceAll(" ", "\\x20")}/.omp-console/env`);
 		expect(unit).toContain("Environment=OMP_CONSOLE_SUPERVISED=1");
 	});
 
-	it("starts launchd through the wrapper that validates and loads the env file", async () => {
+	it.skipIf(process.platform === "win32")("starts launchd through the wrapper that validates and loads the env file (launchd-only)", async () => {
 		const plist = await render("render-launchd.ts", "ops/launchd/dev.ompconsole.daemon.plist.template", os.tmpdir());
 		const wrapper = path.join(repoRoot, "scripts/launchd-wrapper.sh");
 		const wrapperArgument = `<string>${wrapper}</string>`;

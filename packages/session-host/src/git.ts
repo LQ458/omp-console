@@ -14,6 +14,21 @@ import type { ChangedFile, FileAssetSide, FileContents, HeadCommit } from "@oh-m
 import { GitModel } from "@oh-my-pi/pi-coding-agent/cli/git-tui/state";
 import { RequestError } from "./request-error";
 
+function comparisonText(text: string, normalizeCrlf: boolean): string {
+	if (!normalizeCrlf || !text.includes("\r\n")) return text;
+	return text.replace(/\r\n/g, "\n");
+}
+
+function textDiffDocument(contents: Extract<FileContents, { kind: "text" }>, filePath: string, normalizeCrlf: boolean) {
+	const oldText = comparisonText(contents.oldText, normalizeCrlf);
+	const newText = comparisonText(contents.newText, normalizeCrlf);
+	const lineEndingsChanged = oldText !== contents.oldText || newText !== contents.newText;
+	// Stream runs were computed from raw bytes and no longer align after CRLF canonicalization.
+	return buildDiffDocument(oldText, newText, filePath, {
+		streamResult: lineEndingsChanged ? undefined : contents.streamResult,
+	});
+}
+
 function fileSummary(file: ChangedFile): GitChangedFile {
 	return {
 		path: file.path,
@@ -68,9 +83,9 @@ function assetPreview(side: FileAssetSide): GitAssetPreview {
 	}
 }
 
-function fileDiff(contents: FileContents, filePath: string): GitFileDiff {
+function fileDiff(contents: FileContents, filePath: string, normalizeCrlf: boolean): GitFileDiff {
 	if (contents.kind === "asset") return { kind: "asset", old: assetPreview(contents.old), new: assetPreview(contents.new) };
-	const document = buildDiffDocument(contents.oldText, contents.newText, filePath, { streamResult: contents.streamResult });
+	const document = textDiffDocument(contents, filePath, normalizeCrlf);
 	const hunks = document.hunks.map(hunk => {
 		const lines: GitDiffLine[] = [];
 		for (const row of hunk.rows) {
@@ -123,7 +138,8 @@ export class GitService {
 		const file = files.find(candidate => candidate.path === path);
 		if (!file) throw new RequestError("not-found", `no ${area} change for ${path}`);
 		const contents = await model.streamContents(file, () => {});
-		return fileDiff(contents, path);
+		const normalizeCrlf = contents.kind === "text" && (await this.#usesAutocrlf());
+		return fileDiff(contents, path, normalizeCrlf);
 	}
 	async applyHunk(
 		action: "stage" | "unstage",
@@ -141,7 +157,7 @@ export class GitService {
 		if (!file) throw new RequestError("not-found", `no ${area} change for ${filePath}`);
 		const contents = await model.streamContents(file, () => {});
 		if (contents.kind !== "text") throw new RequestError("bad-request", "hunk operations require a text diff");
-		const document = buildDiffDocument(contents.oldText, contents.newText, file.path, { streamResult: contents.streamResult });
+		const document = textDiffDocument(contents, file.path, await this.#usesAutocrlf());
 		const hunk = document.hunks[hunkIndex];
 		if (!document.canPatch || !hunk || hunk.patch === "") throw new RequestError("not-found", `no applyable hunk ${hunkIndex + 1} for ${filePath}`);
 		if (new Bun.CryptoHasher("sha256").update(hunk.patch).digest("hex") !== expectedPatchHash) {
@@ -178,6 +194,13 @@ export class GitService {
 		if (model.staged.length === 0) throw new RequestError("conflict", "stage at least one file before committing");
 		await model.commit(message);
 		return this.view();
+	}
+	async #usesAutocrlf(): Promise<boolean> {
+		// Preserve intentional CRLF unless Git's effective config canonicalizes it on checkout.
+		if (process.platform !== "win32") return false;
+		const repository = vcs.git(this.#cwd);
+		const value = await repository?.configGet("core.autocrlf");
+		return value?.trim().toLowerCase() === "true";
 	}
 
 	async #model(revision?: string): Promise<GitModel> {

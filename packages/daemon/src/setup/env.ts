@@ -2,6 +2,7 @@ import { refreshDirsFromEnv } from "@oh-my-pi/pi-utils/dirs";
 import { constants as fsConstants } from "node:fs";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { isWindows, privateFileProblem } from "../platform";
 
 const VARIABLE_NAME = /^[A-Z_][A-Z0-9_]*$/;
 
@@ -21,22 +22,21 @@ function parseAssignments(contents: string): Array<[string, string]> {
 	return [...values];
 }
 
-/** Loads only literal KEY=value lines from a private, current-user-owned state file. */
+/** Loads literal KEY=value lines from a private POSIX file or an ACL-protected Windows state directory. */
 export async function loadStateEnvironment(stateDir: string): Promise<string[]> {
 	const file = path.join(stateDir, "env");
 	let handle: fs.FileHandle;
 	try {
-		handle = await fs.open(file, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW);
+		handle = await fs.open(file, fsConstants.O_RDONLY | (isWindows ? 0 : fsConstants.O_NOFOLLOW));
 	} catch (error) {
 		if (typeof error === "object" && error !== null && "code" in error && error.code === "ENOENT") return [];
-		throw new Error("could not open the omp-console env file safely");
+		const code = typeof error === "object" && error !== null && "code" in error ? String(error.code) : "unknown error";
+		throw new Error(`could not open the omp-console env file safely (${code})`);
 	}
 	try {
-		const stat = await handle.stat();
-		const uid = process.getuid?.();
-		if (!stat.isFile()) throw new Error("omp-console env must be a regular file");
-		if (uid === undefined || stat.uid !== uid) throw new Error("omp-console env must be owned by the daemon user");
-		if ((stat.mode & 0o7777) !== 0o600) throw new Error("omp-console env must have mode 0600");
+		const stat = isWindows ? await fs.lstat(file) : await handle.stat();
+		const problem = privateFileProblem(stat);
+		if (problem !== undefined) throw new Error(`omp-console env ${problem}`);
 		const assignments = parseAssignments(await handle.readFile("utf8"));
 		for (const [key, value] of assignments) process.env[key] = value;
 		// omp resolves its agent/config directories at import time; re-read them so PI_CODING_AGENT_DIR and

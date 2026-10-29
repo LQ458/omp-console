@@ -347,18 +347,18 @@ describe("push coalescing", () => {
 });
 
 describe("VAPID key", () => {
-	it("is generated on first run with mode 0600, reused after restart, tightened if loosened, and never logged", async () => {
+	it("generates the key, reuses it after restart, tightens POSIX mode, and never logs it", async () => {
 		const f = await senderFixture();
 		const file = path.join(f.stateDir, "vapid-keys.json");
-		expect(fs.statSync(file).mode & 0o777).toBe(0o600);
+		if (process.platform !== "win32") expect(fs.statSync(file).mode & 0o777).toBe(0o600);
 		const stored = JSON.parse(fs.readFileSync(file, "utf8")) as { publicKey: string; privateKey: string };
 		expect(stored.publicKey).toBe(f.sender.publicKey);
 
-		fs.chmodSync(file, 0o644);
+		if (process.platform !== "win32") fs.chmodSync(file, 0o644);
 		const again = await PushSender.open({ stateDir: f.stateDir, store: f.store });
 		senders.push(again);
 		expect(again.publicKey).toBe(f.sender.publicKey);
-		expect(fs.statSync(file).mode & 0o777).toBe(0o600);
+		if (process.platform !== "win32") expect(fs.statSync(file).mode & 0o777).toBe(0o600);
 
 		await f.subscribe("/ok");
 		await f.subscribe("/bad", 503);

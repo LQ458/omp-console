@@ -15,7 +15,17 @@ import type {
 	WorkerRequestResult,
 } from "@omp-console/protocol";
 import * as vcs from "@oh-my-pi/pi-natives/vcs";
-import { Fixture, newRoom, pidsMatching, sleep, snapshotText, waitUntil, type WorkerLine, type WorkerProcess } from "./harness";
+import { childPidsMatching, cloneGitRepositoryWithAutocrlfOff } from "./host-test-helpers";
+import {
+	Fixture,
+	newRoom,
+	pidsMatching,
+	sleep,
+	snapshotText,
+	waitUntil,
+	type WorkerLine,
+	type WorkerProcess,
+} from "./harness";
 
 let fixture: Fixture | undefined;
 afterEach(async () => {
@@ -817,7 +827,7 @@ describe("session-op: rewind and input", () => {
 		const source = vcs.git(import.meta.dir);
 		if (!source) throw new Error("the session-host tests must run from a Git checkout");
 		fs.rmSync(fixture.cwd, { recursive: true, force: true });
-		await vcs.clone(source.info().repoRoot, fixture.cwd);
+		cloneGitRepositoryWithAutocrlfOff(source.info().repoRoot, fixture.cwd);
 		const repository = vcs.requireGit(fixture.cwd);
 		await repository.configSet("user.name", "Deck Worker Test");
 		await repository.configSet("user.email", "deck-worker@example.invalid");
@@ -1041,7 +1051,8 @@ describe("session-op: terminal-only commands", () => {
 		}
 		expect(snapshot?.status).toBe("cancelled");
 	}, 60_000);
-	test("cleanse cancellation kills a running checker process", async () => {
+
+	test("cleanse cancellation kills a running checker process tree", async () => {
 		fixture = new Fixture({ configYaml: "modelRoles:\n  smol: stub/stub-model\n" });
 		const worker = fixture.spawn(newRoom(), [], { STUB_CLEANSE_CHECKER_SLEEP: "true" });
 		await worker.ready();
@@ -1058,7 +1069,15 @@ describe("session-op: terminal-only commands", () => {
 			),
 		).toEqual({ ok: true, runId });
 
-		const checkerPid = await waitUntil("long-running cleanse checker process", () => pidsMatching("/bin/sleep 30")[0], 60_000);
+		const checkerMarker = "omp-console-cleanse-checker-process";
+		const childMarker = "omp-console-cleanse-checker-child";
+		const checkerPid = await waitUntil(
+			"long-running cleanse checker process",
+			() => childPidsMatching(worker.pid, checkerMarker)[0],
+			60_000,
+			100,
+		);
+		await waitUntil("cleanse checker child process", () => childPidsMatching(worker.pid, childMarker).length > 0, 30_000, 100);
 		const active = ok(await op(worker, { op: "cleanse-state" }));
 		expect("state" in active && active.state?.checkers).toEqual([expect.objectContaining({ status: "running" })]);
 		expect(ok(await op(worker, { op: "cleanse-cancel", runId }))).toEqual({ ok: true });
@@ -1074,7 +1093,13 @@ describe("session-op: terminal-only commands", () => {
 			await sleep(50);
 		}
 		expect(snapshot?.status).toBe("cancelled");
-		await waitUntil("cancelled checker process exit", () => !pidsMatching("/bin/sleep 30").includes(checkerPid), 30_000);
+		await waitUntil(
+			"cancelled checker process exit",
+			() => !childPidsMatching(worker.pid, checkerMarker).includes(checkerPid),
+			30_000,
+			100,
+		);
+		await waitUntil("cancelled checker child exit", () => childPidsMatching(worker.pid, childMarker).length === 0, 30_000, 100);
 	}, 90_000);
 
 	test("cleanse cancellation aborts a running repair agent", async () => {

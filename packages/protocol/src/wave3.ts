@@ -193,7 +193,7 @@ export interface PathSuggestions {
 	matches: Array<{ path: string; exists: true; reason?: string }>;
 	/** A path that does not exist yet, built from `q` under the best-fitting root; created only on session start. */
 	create?: { path: string; root: string };
-	/** Absolute expansion of a typed `~/...` path, including when it does not exist yet. */
+	/** Absolute expansion of a typed `~/...` or native absolute path (drive-letter/UNC on Windows), including when it does not exist yet. */
 	typedPath?: string;
 }
 

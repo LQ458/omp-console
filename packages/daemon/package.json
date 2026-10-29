@@ -12,7 +12,7 @@
 	"scripts": {
 		"start": "bun src/main.ts",
 		"test": "bun test",
-		"check:types": "! tsgo -p tsconfig.json --noEmit | grep -E '^(src|test)/'"
+		"check:types": "bun scripts/check-types.ts"
 	},
 	"engines": {
 		"bun": ">=1.4"

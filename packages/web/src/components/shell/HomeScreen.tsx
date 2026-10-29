@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 
 import { useEffect, useState } from "react";
 import type { DeckApi, DeckApiError } from "../../lib/api";
+import { basename } from "../../lib/native-path";
 import type { LayoutMode } from "../../lib/layout";
 import { AgendaStrip } from "../agenda/AgendaStrip";
 import { ReturnBrief } from "../brief/ReturnBrief";
@@ -183,7 +184,7 @@ export function HomeScreen({
 						>
 							<Moon size={17} aria-hidden="true" />
 							<span>
-								<strong>Morning report · {item.session.title?.trim() || item.session.cwd.split("/").filter(Boolean).at(-1) || "Session"}</strong>
+								<strong>Morning report · {item.session.title?.trim() || basename(item.session.cwd) || "Session"}</strong>
 								<small>{overnightPhaseLabel(item.state.phase)} · deadline {localDeadline(item.state.policy.deadline)}</small>
 							</span>
 							<small>{reportPreview(item.state.report ?? "")}</small>

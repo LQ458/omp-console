@@ -2,7 +2,7 @@
  * Web Push sender (RFC 8030 / 8291 / 8292) for the installed PWA.
  *
  * - VAPID key pair: generated on first run with `web-push`, stored as `vapid-keys.json` under the state dir
- *   (mode 0600), reused on every later start. It is never logged and never leaves the daemon except the public
+ *   (mode 0600 on POSIX; Windows uses the state directory ACL), reused on every later start. It is never logged and never leaves the daemon except the public
  *   half through `GET /api/push/public-key`. A corrupt key file stops the daemon instead of being replaced,
  *   because a new key silently invalidates every stored subscription.
  * - Triggers: every worker `notify` status and every worker crash. Everything else stays silent.
@@ -26,6 +26,7 @@ import * as webpush from "web-push";
 import type { PushStore, StoredPushSubscription } from "./push";
 import { latestAnswerableChoices, type PushAnswerTokenStore } from "./push-answer";
 import type { CrashEvent, NotifyEvent } from "./supervisor";
+import { isWindows, privateFileProblem } from "./platform";
 
 export const DEFAULT_PUSH_TTL_SECONDS = 3600;
 export const DEFAULT_PUSH_COALESCE_MS = 30_000;
@@ -110,6 +111,10 @@ function isVapidKeys(value: unknown): value is VapidKeys {
 async function readVapidKeys(file: string): Promise<VapidKeys | undefined> {
 	let text: string;
 	try {
+		if (isWindows) {
+			const problem = privateFileProblem(await fs.lstat(file));
+			if (problem !== undefined) throw new Error(`${file} ${problem}`);
+		}
 		text = await Bun.file(file).text();
 	} catch (err) {
 		if (isEnoent(err)) return undefined;
@@ -124,8 +129,8 @@ async function readVapidKeys(file: string): Promise<VapidKeys | undefined> {
 	if (!isVapidKeys(parsed)) {
 		throw new Error(`${file} does not hold a VAPID key pair; fix or delete it (deleting invalidates every stored subscription)`);
 	}
-	// A looser mode (copied from a backup, for example) is tightened, never trusted.
-	await fs.chmod(file, 0o600);
+	// On POSIX, a looser mode (copied from a backup, for example) is tightened, never trusted.
+	if (!isWindows) await fs.chmod(file, 0o600);
 	return { publicKey: parsed.publicKey, privateKey: parsed.privateKey };
 }
 

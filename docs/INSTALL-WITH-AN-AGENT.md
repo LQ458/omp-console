@@ -1,56 +1,54 @@
 # Install with a coding agent
 
-Let a coding agent on your computer (omp, Claude Code, Codex, or similar) install omp-console for you. It follows the [step-by-step guide](INSTALL.md), checks each step, and stops to ask before anything that needs your password or permission.
+A coding agent running on your computer can install omp-console by following the [install guide](INSTALL.md). It checks each step and pauses before actions that need your permission.
 
-1. Open a terminal on the computer that should run omp-console: Terminal on a Mac, any terminal on Linux, or PowerShell or the Ubuntu app on Windows.
-2. Start your agent there, for example `omp`, `claude`, or `codex`.
-3. Copy everything inside the box below and paste it as your message.
-4. Answer its questions. At the end, it tells you how to open omp-console.
+1. Open Terminal on macOS, a terminal on Linux, or PowerShell on Windows on the computer that will run omp-console.
+2. Start a coding agent there, such as omp, Claude Code, or Codex.
+3. Copy the full prompt below and send it to the agent.
+4. Answer its questions. It will tell you how to open omp-console.
 
-Two steps stay with you: signing in to your model provider (it opens a browser login), and clicking **Pair this browser**. The agent never asks for passwords or API keys in the chat; don't paste them there.
+You must sign in to your model provider in its browser and click **Pair this browser** yourself. Do not paste passwords or API keys into the agent chat.
 
 ````text
-Install omp-console (https://github.com/LQ458/omp-console) on this computer for me. The full guide is docs/INSTALL.md in that repository; follow it, and follow these rules.
+Install omp-console (https://github.com/LQ458/omp-console) on this computer for me. Follow docs/INSTALL.md in that repository. Follow these rules and steps.
 
 Rules
-- Work only on this computer, as my user. Ask me before installing system packages and before installing Bun or omp. For any command that needs sudo or administrator rights, do not run it yourself: give me the exact command, tell me where to run it, and wait until I say it is done.
+- Work only on this computer and as my user. Ask me before installing system packages, Bun, omp, or Git for Windows. For any command requiring sudo or administrator rights, show me the exact command, tell me where to run it, and wait for me to say it is done.
 - Never ask me for, read, print, or store passwords, API keys, or tokens. Do not open or print ~/.omp, ~/.claude, ~/.codex, or ~/.omp-console/env.
 - Do not change my existing omp settings or sessions.
-- Keep the daemon on 127.0.0.1. Do not set up Tailscale, Funnel, port forwarding, or a reverse proxy unless I ask.
-- Run one step at a time and check that it worked before the next. If a step fails twice, stop, show me the exact error output, and say what you think is wrong. Do not work around the installer or edit its files.
-- Explain what you are doing in one short sentence per step, in plain words.
+- Keep the service on 127.0.0.1. Do not set up Tailscale, Funnel, port forwarding, or a reverse proxy unless I ask.
+- Do one step at a time and check that it worked before continuing. If a step fails twice, stop, show me the exact error, and explain the likely cause. Do not work around the installer or edit its files.
+- Explain each step in one short sentence using plain words.
 
 Steps
 1. Detect the system.
-   - Windows itself (PowerShell or cmd; `uname` is missing or `$env:OS` is `Windows_NT`): omp-console runs inside WSL 2 there. Run `wsl -l -v`. If WSL or an Ubuntu distribution is missing, tell me to run `wsl --install` in an administrator PowerShell, restart Windows, open Ubuntu once to create my Linux user, and then ask you to continue; stop until I do. Once Ubuntu exists, run every later command inside it as `wsl -d Ubuntu -- bash -lc '<command>'` (so `~` means my Linux home), and treat the system as Linux below. If a command fails only when run through `wsl -- ...` (for example `systemctl --user` cannot connect to the bus), give me that command to run in the Ubuntu window instead.
-   - Otherwise run `uname -sm`. Supported: macOS, or Linux (including WSL, where `uname -r` contains `microsoft`).
-   - On Linux, check whether `systemctl --user show-environment` works (systemd user services). On WSL, if it does not, tell me to turn systemd on as in docs/INSTALL.md, section "Windows: set up WSL first", step 3, and stop until I have done it.
-2. Check `git --version`. If missing: on macOS, tell me to accept Apple's command line tools prompt (run `xcode-select --install`); on Linux, give me the package-manager command that installs git, curl, and unzip (for Ubuntu: `sudo apt-get update && sudo apt-get install -y git curl unzip`) to run myself. Also check `unzip -v`, which the Bun installer needs.
-3. Check `bun --version` (need 1.4 or newer; also look in ~/.bun/bin). If missing, ask me, then install with `curl -fsSL https://bun.sh/install | bash`. If older than 1.4, ask me, then run `bun upgrade`. Make sure ~/.bun/bin is on PATH for the rest of the session.
-4. Check `omp --version` (also look in ~/.local/bin and ~/.bun/bin). If missing, ask me, then install with `curl -fsSL https://omp.sh/install | sh`. Do not sign me in yourself.
-5. Get the source: if ~/omp-console exists and is a clone of github.com/LQ458/omp-console, run `git -C ~/omp-console pull --ff-only`; if it exists but is something else, stop and ask me; otherwise `git clone https://github.com/LQ458/omp-console.git ~/omp-console`.
-6. Install from ~/omp-console:
-   - macOS: `./scripts/install.sh --launchd`
-   - Linux with systemd user services: run `loginctl enable-linger "$USER"` (if it fails, give me `sudo loginctl enable-linger "$USER"` to run myself), then `./scripts/install.sh --systemd`
-   - Linux without systemd user services: `./scripts/install.sh --plain`, then tell me the exact start command it printed; I will run it in a separate terminal and keep that window open.
-   You can run `./scripts/install.sh --dry-run` with the same option first to show me what it will do.
-7. Verify: `~/.local/bin/omp-console status` must say the daemon is responding (with --plain, after I start it). If not, show me the output of `~/.local/bin/omp-console logs` with anything that looks like a secret removed, then stop.
-8. Finish with a short summary for me:
-   - versions of Bun, omp, and the omp-console commit (`git -C ~/omp-console log -1 --format=%h`);
-   - how to open it: run `~/.local/bin/omp-console open` in my own terminal (on Windows: in the Ubuntu window), open the link (on Windows: copy it into Edge or Chrome), and click "Pair this browser"; afterwards it lives at http://127.0.0.1:7490;
-   - on Windows: keep one Ubuntu window open, even minimized, while I use omp-console, because WSL stops the service shortly after the last Ubuntu window closes;
-   - if `omp` has no model sign-in yet: run `omp`, type `/login`, pick my provider, approve in the browser, quit omp, then reload omp-console;
-   - how to update (`cd ~/omp-console && git pull && ./scripts/install.sh` with the same option) and uninstall (`./scripts/install.sh --uninstall`);
-   - optional desktop app and phone access: point me to sections 7 and 8 of docs/INSTALL.md, do not set them up.
+   - Windows 10/11 x64 (`$env:OS` is `Windows_NT`): use PowerShell, not WSL. Check `git --version`, `bun --version`, and `omp --version`.
+   - Otherwise, run `uname -sm`. Continue only on macOS or Linux. On Linux, check whether `systemctl --user show-environment` works.
+2. Check Git with `git --version`. If it is missing, ask before installing it. On macOS, tell me to accept Apple's command line tools prompt (`xcode-select --install`). On Linux, give me the package-manager command for Git, curl, and unzip. On Windows, ask before installing [Git for Windows](https://git-scm.com/download/win) or using `winget install --id Git.Git -e`. Reopen PowerShell and check again.
+3. Check `bun --version`; the required version is 1.4 or newer. If Bun is missing, ask before installing it. On Windows use `powershell -c "irm bun.sh/install.ps1 | iex"`; on macOS/Linux use `curl -fsSL https://bun.sh/install | bash`. Reopen the terminal and check again. If Bun is too old, ask before running `bun upgrade`.
+4. Check `omp --version`. If omp is missing, ask before installing it. On Windows use `irm https://omp.sh/install.ps1 | iex`; on macOS/Linux use `curl -fsSL https://omp.sh/install | sh`. Reopen the terminal and check again. Do not sign me in.
+5. Get the source. Use `$HOME\omp-console` on Windows and `~/omp-console` on macOS/Linux. If that folder is a clone of github.com/LQ458/omp-console, run `git pull --ff-only` there. If the folder exists but is not that repository, stop and ask me. Otherwise, clone `https://github.com/LQ458/omp-console.git` there.
+6. Install from the checkout.
+   - Windows PowerShell: run `.\scripts\install.ps1 -DryRun`, review the output with me, then run `.\scripts\install.ps1`. If PowerShell blocks the unsigned script because of its execution policy, show me `powershell -ExecutionPolicy Bypass -File .\scripts\install.ps1` and wait for me to approve and run it.
+   - macOS: run `./scripts/install.sh --launchd`.
+   - Linux with systemd user services: run `loginctl enable-linger "$USER"`. If that fails, show me `sudo loginctl enable-linger "$USER"` and wait for me to run it. Then run `./scripts/install.sh --systemd`.
+   - Linux without systemd user services: run `./scripts/install.sh --plain`. Show me the exact start command it prints. I will run it in another terminal and keep that window open.
+7. Verify the service. Run `omp-console status` on Windows or `~/.local/bin/omp-console status` on macOS/Linux. It must say the service is responding. If it does not, show me the recent output from `omp-console logs` or `~/.local/bin/omp-console logs`, remove anything that looks like a secret, and stop.
+8. Finish with a short summary:
+   - Bun and omp versions, and the omp-console commit (`git -C "$HOME\omp-console" log -1 --format=%h` on Windows; use `~/omp-console` on macOS/Linux).
+   - How to open omp-console: run `omp-console open` in PowerShell or `~/.local/bin/omp-console open` on macOS/Linux; open the link and click **Pair this browser**. The page is at `http://127.0.0.1:7490`.
+   - If omp has no model sign-in, I must run omp, type `/login`, choose my provider, approve the browser login, quit omp, then reload omp-console. Do not do this for me.
+   - How to update and uninstall. On Windows: run `Set-Location "$HOME\omp-console"`, then `git pull`, then `.\scripts\install.ps1`; reuse `-AllowHost` and `-Owner` if I set them. Then run `.\scripts\install.ps1 -Uninstall`. On macOS/Linux, use `cd ~/omp-console` and rerun `./scripts/install.sh` with the same service option, or use `./scripts/install.sh --uninstall`.
+   - Optional desktop app and phone access: point me to the relevant sections of docs/INSTALL.md. Do not set them up.
 ````
 
-## What the agent will and won't do
+## What the agent will and will not do
 
-| It will | It won't |
+| It will | It will not |
 |---|---|
-| Check git, Bun, and omp, and install the missing ones after asking | Use `sudo` without asking |
-| Download omp-console into `~/omp-console` and run its installer | Read or print your keys, tokens, or omp settings |
+| Check Git, Bun, and omp, and install missing tools after asking | Use `sudo` without asking |
+| Download omp-console into `~/omp-console` and run its installer | Read or print keys, tokens, or omp settings |
 | Start the background service and check that it responds | Sign in to your model provider for you |
-| Tell you exactly what to click and how to update or uninstall | Open omp-console to your network or the internet |
+| Tell you what to click and how to update or uninstall | Open omp-console to your network or the internet |
 
-If something goes wrong, the agent stops and shows the error. The [troubleshooting table](INSTALL.md#troubleshooting) covers the common cases.
+If something goes wrong, the agent should stop and show the error. See the [troubleshooting table](INSTALL.md#troubleshooting). After connecting your browser, continue with [Getting started](GETTING-STARTED.md).

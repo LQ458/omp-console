@@ -1,5 +1,6 @@
 import type { CardStatus, SessionCard, SessionSummary, TitleSource } from "@omp-console/protocol";
 import type { DeckApi } from "./api";
+import { basename, pathKey } from "./native-path";
 
 export interface SessionCardView {
 	card: SessionCard;
@@ -18,10 +19,6 @@ export interface CardGroup {
 
 const EMPTY_TITLE_OVERRIDES: ReadonlyMap<string, string> = new Map();
 
-function basename(path: string): string {
-	const trimmed = path.replace(/\/+$/, "");
-	return trimmed.slice(trimmed.lastIndexOf("/") + 1) || trimmed || "/";
-}
 
 function statusFromLive(session: SessionSummary, cardStatus?: CardStatus): CardStatus {
 	if (session.awaitingAnswer || session.state === "asking") return "waiting";
@@ -32,7 +29,7 @@ function statusFromLive(session: SessionSummary, cardStatus?: CardStatus): CardS
 }
 
 function fallbackCard(session: SessionSummary, live: boolean): SessionCard {
-	const title = session.title?.trim() || basename(session.cwd);
+	const title = session.title?.trim() || basename(session.cwd) || session.cwd || "/";
 	const titleSource: TitleSource = session.title?.trim() ? "omp" : "deck";
 	return {
 		sessionId: session.id,
@@ -136,16 +133,15 @@ export function groupSessionCards(
 	const selected = typeof grouping === "boolean" ? grouping ? "topic" : "status" : grouping;
 
 	if (selected === "folder") {
-		const buckets = new Map<string, SessionCardView[]>();
+		const buckets = new Map<string, { label: string; cards: SessionCardView[] }>();
 		for (const item of normal) {
-			const folder = item.card.cwd;
-			const bucket = buckets.get(folder) ?? [];
-			bucket.push(item);
-			buckets.set(folder, bucket);
+			const key = pathKey(item.card.cwd);
+			const bucket = buckets.get(key);
+			if (bucket === undefined) buckets.set(key, { label: item.card.cwd, cards: [item] });
+			else bucket.cards.push(item);
 		}
-		for (const folder of [...buckets.keys()].sort((a, b) => a.localeCompare(b))) {
-			const bucket = buckets.get(folder);
-			if (bucket?.length) groups.push({ key: `folder:${folder}`, label: folder, cards: bucket, scheduled: false, collapsible: false });
+		for (const { label, cards: bucket } of [...buckets.values()].sort((a, b) => a.label.localeCompare(b.label))) {
+			groups.push({ key: `folder:${label}`, label, cards: bucket, scheduled: false, collapsible: false });
 		}
 	} else {
 		const recentCutoff = now - 7 * 24 * 60 * 60 * 1000;

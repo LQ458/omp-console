@@ -12,6 +12,7 @@ import {
 	groupBySource,
 	rankCommands,
 	withOvernightCommand,
+	withTourCommand,
 	SOURCE_LABEL,
 	splitPaletteQuery,
 } from "../../lib/palette";
@@ -94,7 +95,7 @@ export function CommandPalette({ api, sessionId, onClose, onOpenCatalog, overnig
 		return recipes.filter(recipe => needle === "" || recipe.name.toLowerCase().includes(needle));
 	}, [recipes, searchQuery]);
 	const ranked = useMemo(
-		() => (catalog ? rankCommands(withOvernightCommand(catalog.commands, overnightEnabled), search).slice(0, RESULT_LIMIT) : []),
+		() => (catalog ? rankCommands(withTourCommand(withOvernightCommand(catalog.commands, overnightEnabled)), search).slice(0, RESULT_LIMIT) : []),
 		[catalog, search, overnightEnabled],
 	);
 	const groups = useMemo(() => (search === "" ? groupBySource(ranked) : []), [ranked, search]);

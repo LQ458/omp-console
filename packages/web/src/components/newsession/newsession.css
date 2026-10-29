@@ -1,28 +1,64 @@
+.dk-new-picker-backdrop {
+	position: fixed;
+	inset: 0;
+	z-index: 1200;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 16px;
+	background: var(--backdrop);
+}
+
 .dk-new-picker {
 	display: flex;
 	flex-direction: column;
-	gap: 9px;
-	margin: 0 4px;
-	padding: 10px;
+	gap: 14px;
+	width: min(640px, 100%);
+	max-height: min(760px, calc(100dvh - 32px));
+	overflow-y: auto;
+	overscroll-behavior: contain;
+	margin: 0;
+	padding: 20px;
 	border: 1px solid var(--border-strong);
 	border-radius: var(--radius-lg);
 	background: var(--bg-raised);
-}
-
-.dk-new-picker-head {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	font-size: 12px;
+	box-shadow: var(--shadow-card);
 	color: var(--fg);
 }
 
+.dk-new-picker-head {
+	position: sticky;
+	top: 0;
+	z-index: 2;
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 12px;
+	color: var(--fg);
+	background: var(--bg-raised);
+}
+.dk-new-picker-head h2 {
+	margin: 0;
+	font-size: 16px;
+}
+
+.dk-new-picker-head > div {
+	min-width: 0;
+}
+
 .dk-new-options {
-	max-height: 220px;
+	max-height: 320px;
 	overflow-y: auto;
 	display: flex;
 	flex-direction: column;
 	gap: 2px;
+}
+.dk-new-recent-list-compact {
+	max-height: 190px;
+}
+/* A height-capped list must scroll, never squeeze its rows: shrinking flex items overlapped their text. */
+.dk-new-options > * {
+	flex-shrink: 0;
 }
 
 .dk-new-option {
@@ -54,6 +90,8 @@
 }
 
 .dk-new-option-main > span,
+.dk-new-option-main > strong,
+.dk-new-option-main > small,
 .dk-new-option-main code {
 	min-width: 0;
 	overflow: hidden;
@@ -61,18 +99,17 @@
 	text-overflow: ellipsis;
 }
 
-.dk-new-option-main > span {
+.dk-new-option-main > span,
+.dk-new-option-main > strong {
 	font-size: 12px;
 }
 
+.dk-new-option-main > small,
 .dk-new-option-main code {
 	font-size: 10px;
 	color: var(--fg-faint);
 }
 
-.dk-new-count {
-	color: var(--fg-muted);
-}
 
 .dk-new-option-action {
 	color: var(--accent);
@@ -257,4 +294,160 @@
 
 .dk-new-more-options[open] > summary {
 	margin-bottom: 7px;
+}
+
+.dk-new-picker-backdrop :focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 2px;
+}
+
+.dk-new-picker-head .dk-new-prompt {
+	max-width: 66ch;
+	margin: 5px 0 0;
+	font-size: 12px;
+	line-height: 1.45;
+	color: var(--fg-muted);
+}
+
+.dk-new-section,
+.dk-new-browser {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	min-width: 0;
+}
+
+.dk-new-section > h3,
+.dk-new-browser > h3 {
+	margin: 0;
+	font-size: 12px;
+	font-weight: 650;
+	color: var(--fg);
+}
+
+.dk-new-browse-toggle,
+.dk-new-text-link {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+	width: fit-content;
+	padding: 3px 0;
+	border: 0;
+	background: transparent;
+	color: var(--accent);
+	font: inherit;
+	font-size: 12px;
+	cursor: pointer;
+}
+
+.dk-new-browse-toggle[aria-expanded="true"] > svg {
+	transform: rotate(90deg);
+}
+
+.dk-new-text-link {
+	font-size: 11px;
+}
+
+.dk-new-breadcrumbs {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	min-width: 0;
+	overflow-x: auto;
+	padding: 2px 0;
+	white-space: nowrap;
+}
+
+.dk-new-crumb {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	color: var(--fg-muted);
+	font-size: 11px;
+}
+
+.dk-new-crumb button {
+	padding: 2px;
+	border: 0;
+	background: transparent;
+	color: var(--accent);
+	font: inherit;
+	cursor: pointer;
+}
+
+.dk-new-crumb [aria-current="location"] {
+	color: var(--fg);
+	font-weight: 600;
+}
+
+.dk-new-folder-list {
+	max-height: 270px;
+	min-height: 0;
+	padding: 3px;
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+}
+
+.dk-new-folder-list:focus-visible {
+	outline-offset: 2px;
+}
+
+.dk-new-folder-list .dk-new-option {
+	min-height: 40px;
+}
+
+.dk-new-folder-actions {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.dk-new-folder-actions .dk-wide-btn {
+	flex: 1;
+}
+
+.dk-new-folder-form {
+	display: flex;
+	flex-direction: column;
+	gap: 7px;
+	padding: 10px;
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	background: var(--bg);
+}
+
+.dk-new-folder-form .sh-field {
+	margin: 0;
+}
+
+.dk-new-error-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 10px;
+}
+
+.dk-new-error-row .dk-new-error {
+	flex: 1;
+}
+
+.dk-new-used {
+	color: var(--fg-faint);
+}
+
+@media (max-width: 600px) {
+	.dk-new-picker-backdrop {
+		align-items: flex-end;
+		padding: 0;
+	}
+
+	.dk-new-picker {
+		width: 100%;
+		max-height: min(84dvh, 760px);
+		padding: 18px 16px max(18px, env(safe-area-inset-bottom));
+		border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+	}
+	.dk-new-recent-list-compact {
+		max-height: 120px;
+	}
 }

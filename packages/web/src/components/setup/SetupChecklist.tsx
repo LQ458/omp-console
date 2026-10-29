@@ -84,6 +84,10 @@ export function SetupChecklist({ api, onStartSession, onOpenExistingSessions, on
 			setActionMessage(`Clipboard is unavailable. Use: ${text}`);
 		}
 	};
+	const startSession = (): void => {
+		onDismiss?.();
+		onStartSession();
+	};
 	const setup = checks.kind === "ready" ? checks.value : null;
 	const setupError = checks.kind === "error" ? checks.message : null;
 	return (
@@ -134,7 +138,7 @@ export function SetupChecklist({ api, onStartSession, onOpenExistingSessions, on
 								? { label: "Copy log command", onClick: () => void copy(LOGS_COMMAND, "Log command") }
 								: (setup.sessions.count ?? 0) > 0
 									? { label: "Open sessions", onClick: onOpenExistingSessions }
-									: { label: "Start a session", onClick: onStartSession }}
+									: { label: "Start a session", onClick: startSession }}
 						>
 							{setup.sessions.error ?? <>Looking in <code>{setup.sessions.agentDir}</code>.</>}
 						</SetupRow>
@@ -162,7 +166,7 @@ export function SetupChecklist({ api, onStartSession, onOpenExistingSessions, on
 				)}
 			</ul>
 			{actionMessage && <p className="dk-setup-feedback" role="status">{actionMessage}</p>}
-			<button type="button" className="dk-wide-btn dk-wide-btn-primary dk-setup-start" onClick={onStartSession}>Start your first session</button>
+			<button type="button" className="dk-wide-btn dk-wide-btn-primary dk-setup-start" onClick={startSession}>Start your first session</button>
 		</section>
 	);
 }

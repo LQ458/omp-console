@@ -1,4 +1,5 @@
 import type { PreflightCheck } from "@omp-console/protocol";
+import * as path from "node:path";
 
 export interface CommandResult {
 	exitCode: number | null;
@@ -267,7 +268,7 @@ async function permissionsCheck(options: PreflightOptions, cwd: string): Promise
 }
 
 export async function runOvernightPreflight(cwd: string, options: PreflightOptions = {}): Promise<{ checks: PreflightCheck[] }> {
-	if (!/^\//.test(cwd)) throw new Error("cwd must be an absolute path");
+	if (!path.isAbsolute(cwd)) throw new Error("cwd must be an absolute path");
 	const platform = options.platform ?? process.platform;
 	const tasks: Array<Promise<PreflightCheck[]>> = [
 		gitChecks(options, cwd),
@@ -285,7 +286,11 @@ export async function runOvernightPreflight(cwd: string, options: PreflightOptio
 			if (limit && Number(limit[1]) < 100) return [check("thermal", "Thermal state", "warn", `CPU speed limit is ${limit[1]}%.`)];
 			return [check("thermal", "Thermal state", "ok", "No CPU speed limit below 100% was reported.")];
 		})(),
-		...(platform === "linux" ? [(async () => [await keepAwakeCheck(options, cwd)])()] : []),
+		...(platform === "linux"
+			? [(async () => [await keepAwakeCheck(options, cwd)])()]
+			: platform === "win32"
+				? [(async () => [check("keep-awake", "Keep awake", "warn", "Keep-awake is unavailable on Windows; Overnight runs continue without keep-awake protection.")])()]
+				: []),
 		(async () => {
 			const result = await run(options, "gh", ["auth", "status"], cwd, COMMAND_TIMEOUT_MS, { GH_PROMPT_DISABLED: "1" });
 			if (result.spawnError?.includes("No such file") || result.spawnError?.includes("not found")) return [check("gh-auth", "GitHub CLI auth", "ok", "gh is not installed; this check is optional.")];

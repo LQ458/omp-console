@@ -222,7 +222,7 @@ describe("peer daemon HTTP routes", () => {
 		expect(authorizations).toEqual([`Bearer ${peerToken}`]);
 	});
 
-	it("loads peer bearer credentials only from a 0600 token file", async () => {
+	it("loads peer bearer credentials from a valid token file (0600 on POSIX; ACL on Windows)", async () => {
 		const authorizations: Array<string | null> = [];
 		httpPeerServer = Bun.serve<undefined>({
 			hostname: "127.0.0.1",
@@ -233,7 +233,7 @@ describe("peer daemon HTTP routes", () => {
 			},
 		});
 		const tokenFile = path.join(makeTmp("omp-console-peer-token-"), "remote-token");
-		fs.writeFileSync(tokenFile, `${peerToken}\n`, { mode: 0o600 });
+		fs.writeFileSync(tokenFile, `${peerToken}\n`, process.platform === "win32" ? {} : { mode: 0o600 });
 		const t = await startTestDaemon({
 			features: { librarian: false, agenda: false, quickAsk: false, peers: true, openrouterDecisions: false, computerUse: false, overnight: false },
 			peers: [{ id: peer.id, name: peer.name, url: `http://127.0.0.1:${httpPeerServer.port}`, tokenFile }],

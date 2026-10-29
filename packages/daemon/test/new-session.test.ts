@@ -34,8 +34,8 @@ describe("zero-configuration new-session suggestions", () => {
 		);
 
 		expect(recent.map(({ cwd, sessions30d, lastUsedAt }) => ({ cwd, sessions30d, lastUsedAt }))).toEqual([
-			{ cwd: "/work/beta", sessions30d: 1, lastUsedAt: now - 500 },
-			{ cwd: "/work/alpha", sessions30d: 2, lastUsedAt: now - 1_000 },
+			{ cwd: path.resolve("/work/beta"), sessions30d: 1, lastUsedAt: now - 500 },
+			{ cwd: path.resolve("/work/alpha"), sessions30d: 2, lastUsedAt: now - 1_000 },
 		]);
 	});
 

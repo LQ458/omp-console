@@ -3,6 +3,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { logger } from "@oh-my-pi/pi-utils";
 import type { PlanAgentEvent, PlanPorts } from "./ports";
+import { isWindows } from "../platform";
 
 const MAX_PLAN_NODES = 50;
 const MAX_RUNS_PER_SESSION = 50;
@@ -404,7 +405,7 @@ export class PlanRunner {
 			.then(async () => {
 				await fs.mkdir(this.#stateDir, { recursive: true, mode: 0o700 });
 				await fs.appendFile(file, `${record}\n`, { encoding: "utf8", mode: 0o600 });
-				await fs.chmod(file, 0o600);
+				if (!isWindows) await fs.chmod(file, 0o600);
 			})
 			.catch(error => {
 				logger.error("failed to append plan run state", { runId: run.runId, error: errorText(error) });

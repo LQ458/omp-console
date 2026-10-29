@@ -5,8 +5,8 @@
  * (it exited on its own). A crashed worker is relaunched up to `restartBackoffMs.length` times (default 2)
  * with the given backoff, resuming its session file when it has one, then stays `crashed`.
  *
- * Workers run in their own process group so that a SIGKILL escalation, and a sweep after every exit, also
- * reaches tool subprocesses the worker left behind. Room secrets travel on the worker's first stdin line, never in env.
+ * POSIX workers run in their own process group; Windows workers are hidden and their trees are terminated with taskkill.
+ * Room secrets travel on the worker's first stdin line, never in env.
  */
 import { DEFAULT_OVERNIGHT_POLICY, LIVE_AUDIO_EVENT_MAX_CHARS, LIVE_INPUT_MAX_FRAME_BYTES } from "@omp-console/protocol";
 import type {
@@ -41,7 +41,9 @@ import type {
 import { ROOM_ID_BYTES, ROOM_KEY_BYTES, WRITE_TOKEN_BYTES } from "@oh-my-pi/pi-wire";
 import { readLines } from "@oh-my-pi/pi-utils/stream";
 import { totalmem } from "node:os";
+import * as path from "node:path";
 import { $ } from "bun";
+import { sessionPathKey } from "./session-key";
 
 /** Live-session limit for one daemon, from its machine's memory: one slot per 1.5 GB, at least 8, at most 32.
  * Each daemon counts only the sessions it runs itself (a 36 GB Mac gets 25; a 7.7 GB VPS keeps 8). A worker idles at
@@ -56,6 +58,12 @@ const DEFAULT_READY_TIMEOUT_MS = 90_000;
 const DEFAULT_STOP_GRACE_MS = 5_000;
 const DEFAULT_TERM_GRACE_MS = 3_000;
 const FIRST_STATE_WAIT_MS = 1_000;
+/** How long a Windows rss read (one PowerShell process) is reused by health polls. */
+const WINDOWS_RSS_CACHE_MS = 10_000;
+/** Longest a Windows rss read may take before health reports 0 instead of waiting. */
+const WINDOWS_RSS_TIMEOUT_MS = 5_000;
+/** Longest #terminate waits for a Windows worker's exit after taskkill, and again after the direct kill fallback. */
+const WINDOWS_KILL_EXIT_WAIT_MS = 10_000;
 const DEFAULT_RESTART_BACKOFF_MS: readonly number[] = [500, 2_000];
 const DEFAULT_MODEL_CHANGE_TIMEOUT_MS = 10_000;
 const DEFAULT_CATALOG_TIMEOUT_MS = 10_000;
@@ -214,6 +222,21 @@ export interface RoomSecrets {
 }
 
 type Subprocess = Bun.Subprocess<"pipe", "pipe", "pipe">;
+
+/**
+ * Writes one line to a worker's stdin. A synchronous failure still throws to the caller. A worker that has already
+ * exited closes the pipe, and on Windows that surfaces as an EPIPE rejection of write()/flush()/end() rather than a
+ * throw, which went unobserved (an unhandled error in the Windows test run); those promises are observed here.
+ */
+function writeWorkerLine(stdin: Subprocess["stdin"], line: string, end = false): void {
+	ignoreRejection(stdin.write(line));
+	ignoreRejection(stdin.flush());
+	if (end) ignoreRejection(stdin.end());
+}
+
+function ignoreRejection(result: unknown): void {
+	if (result instanceof Promise) result.catch(() => {});
+}
 interface PendingModelChange {
 	id: string;
 	response: PromiseWithResolvers<WorkerModelResult>;
@@ -300,7 +323,7 @@ export function buildWorkerLaunchPlan(options: {
 	}
 	if (options.spec.tools) command.push("--tools", options.spec.tools.join(","));
 	const platform = options.platform ?? process.platform;
-	if (overnight && overnight.quiet !== "normal") {
+	if (overnight && overnight.quiet !== "normal" && platform !== "win32") {
 		// Not every Linux has /usr/bin/nice (e.g. NixOS); resolve it from PATH there.
 		const niceBin = platform === "darwin" ? "/usr/bin/nice" : (Bun.which("nice") ?? "nice");
 		const nice = [niceBin, "-n", overnight.quiet === "quiet" ? "10" : "15"];
@@ -761,9 +784,10 @@ export class Supervisor {
 		return asleep;
 	}
 	async #waitForStopping(sessionId: string | undefined, sessionFile?: string): Promise<void> {
+		const key = sessionFile === undefined ? undefined : sessionPathKey(sessionFile);
 		for (;;) {
 			const pending = [...this.#stopping].filter(
-				worker => worker.id === sessionId || (sessionFile !== undefined && worker.sessionFile === sessionFile),
+				worker => worker.id === sessionId || (key !== undefined && worker.sessionFile !== undefined && sessionPathKey(worker.sessionFile) === key),
 			);
 			if (pending.length === 0) return;
 			await Promise.all(pending.map(worker => worker.stopped.promise));
@@ -860,7 +884,8 @@ export class Supervisor {
 		if (this.#closed) throw new SupervisorError("conflict", "daemon is shutting down");
 		const sessionFile = request.resumeSessionFile;
 		if (sessionFile) {
-			const asleep = [...this.#asleep.values()].find(summary => summary.sessionFile === sessionFile);
+			const key = sessionPathKey(sessionFile);
+			const asleep = [...this.#asleep.values()].find(summary => summary.sessionFile !== undefined && sessionPathKey(summary.sessionFile) === key);
 			if (asleep) {
 				const summary = await this.wake(asleep.id);
 				const worker = this.#workers.get(summary.id);
@@ -1040,8 +1065,7 @@ export class Supervisor {
 		worker.modelChanges.set(agentId, pending);
 
 		try {
-			proc.stdin.write(`${JSON.stringify(build(requestId))}\n`);
-			proc.stdin.flush();
+			writeWorkerLine(proc.stdin, `${JSON.stringify(build(requestId))}\n`);
 		} catch {
 			clearTimeout(timer);
 			worker.modelChanges.delete(agentId);
@@ -1192,8 +1216,7 @@ export class Supervisor {
 		if (!worker) throw new SupervisorError("not-found", `no live session ${sessionId}`);
 		if (worker.stopping || !worker.proc || worker.proc.exitCode !== null) throw new SupervisorError("conflict", "live session worker is not running");
 		if (!worker.liveMode?.active) throw new SupervisorError("conflict", "live mode is not active");
-		worker.proc.stdin.write(`${JSON.stringify({ t: "live-audio", data })}\n`);
-		void worker.proc.stdin.flush();
+		writeWorkerLine(worker.proc.stdin, `${JSON.stringify({ t: "live-audio", data })}\n`);
 	}
 
 	/** The session's usage reports (`fetchUsageReports()`), already stripped of anything credential-shaped by the worker. */
@@ -1277,8 +1300,7 @@ export class Supervisor {
 		if (!proc || !this.#quotaPolicy || worker.stopping) return;
 		const command: WorkerCommand = { t: "quota-policy", providers: [...this.#quotaPolicy] };
 		try {
-			proc.stdin.write(`${JSON.stringify(command)}\n`);
-			proc.stdin.flush();
+			writeWorkerLine(proc.stdin, `${JSON.stringify(command)}\n`);
 		} catch {
 			// The worker is on its way out; a restarted one gets the policy when it reports ready.
 		}
@@ -1290,8 +1312,7 @@ export class Supervisor {
 		if (!proc || worker.stopping) return;
 		const command: WorkerCommand = { t: "freeze", id: `refreeze-${crypto.randomUUID()}`, frozen: true };
 		try {
-			proc.stdin.write(`${JSON.stringify(command)}\n`);
-			proc.stdin.flush();
+			writeWorkerLine(proc.stdin, `${JSON.stringify(command)}\n`);
 		} catch {
 			// Exiting again; the next ready re-sends it.
 		}
@@ -1302,8 +1323,7 @@ export class Supervisor {
 		if (!proc) return;
 		const command: WorkerCommand = { t: "cancel-session-op", id: requestId };
 		try {
-			proc.stdin.write(`${JSON.stringify(command)}\n`);
-			proc.stdin.flush();
+			writeWorkerLine(proc.stdin, `${JSON.stringify(command)}\n`);
 		} catch {
 			// The worker may already be exiting.
 		}
@@ -1348,8 +1368,7 @@ export class Supervisor {
 		if (options.signal?.aborted) onAbort();
 		try {
 			if (worker.requests.has(requestId)) {
-				proc.stdin.write(`${JSON.stringify(build(requestId))}\n`);
-				proc.stdin.flush();
+				writeWorkerLine(proc.stdin, `${JSON.stringify(build(requestId))}\n`);
 			}
 		} catch {
 			clearTimeout(timer);
@@ -1467,8 +1486,7 @@ export class Supervisor {
 		worker.abortRequest = { id: requestId, response, timer };
 		try {
 			const command: WorkerCommand = { t: "abort", id: requestId };
-			proc.stdin.write(`${JSON.stringify(command)}\n`);
-			proc.stdin.flush();
+			writeWorkerLine(proc.stdin, `${JSON.stringify(command)}\n`);
 		} catch {
 			clearTimeout(timer);
 			worker.abortRequest = undefined;
@@ -1478,9 +1496,12 @@ export class Supervisor {
 	}
 
 	findBySessionFile(file: string): SessionSummary | undefined {
-		for (const summary of this.#asleep.values()) if (summary.sessionFile === file) return summary;
+		const key = sessionPathKey(file);
+		for (const summary of this.#asleep.values()) {
+			if (summary.sessionFile !== undefined && sessionPathKey(summary.sessionFile) === key) return summary;
+		}
 		for (const worker of [...this.#workers.values(), ...this.#candidates, ...this.#stopping]) {
-			if (worker.sessionFile === file) return this.#summary(worker);
+			if (worker.sessionFile !== undefined && sessionPathKey(worker.sessionFile) === key) return this.#summary(worker);
 		}
 		return undefined;
 	}
@@ -1548,8 +1569,10 @@ export class Supervisor {
 
 	async health(): Promise<WorkerHealth[]> {
 		const workers = [...this.#workers.values()];
-		const rss = await this.#readRss(workers.flatMap(worker => (worker.proc ? [worker.proc.pid] : [])));
+		// The stall verdict is taken at the call, not after the rss read, which spawns a process and can take a second on
+		// Windows.
 		const now = Date.now();
+		const rss = await this.#readRss(workers.flatMap(worker => (worker.proc ? [worker.proc.pid] : [])));
 		return workers.map(worker => ({
 			sessionId: worker.id,
 			pid: worker.proc?.pid ?? worker.lastPid,
@@ -1607,14 +1630,61 @@ export class Supervisor {
 		return summary;
 	}
 
+	/** Windows rss comes from a PowerShell process (hundreds of ms to start); health is polled, so reuse a recent read. */
+	#windowsRss: { at: number; pids: string; result: Promise<Map<number, number>> } | undefined;
+
 	async #readRss(pids: number[]): Promise<Map<number, number>> {
+		if (pids.length === 0) return new Map();
+		if (process.platform === "win32") {
+			const key = [...pids].sort((a, b) => a - b).join(",");
+			const cached = this.#windowsRss;
+			if (cached && cached.pids === key && Date.now() - cached.at < WINDOWS_RSS_CACHE_MS) return cached.result;
+			const result = this.#readWindowsRss(pids);
+			this.#windowsRss = { at: Date.now(), pids: key, result };
+			return result;
+		}
 		const result = new Map<number, number>();
-		if (pids.length === 0) return result;
 		try {
 			const out = await $`ps -o pid=,rss= -p ${pids.join(",")}`.quiet().nothrow().text();
 			for (const line of out.split("\n")) {
 				const [pid, kb] = line.trim().split(/\s+/);
 				if (pid && kb) result.set(Number(pid), Number(kb) * 1024);
+			}
+		} catch {
+			// rss is informational; absence is reported as 0
+		}
+		return result;
+	}
+
+	async #readWindowsRss(pids: number[]): Promise<Map<number, number>> {
+		const result = new Map<number, number>();
+		try {
+			const child = Bun.spawn(
+				[
+					"powershell.exe",
+					"-NoProfile",
+					"-NonInteractive",
+					"-Command",
+					// SilentlyContinue: one worker that exited in the meantime must not drop every other reading.
+					`Get-Process -Id ${pids.join(",")} -ErrorAction SilentlyContinue | Select-Object Id,WorkingSet64 | ConvertTo-Json -Compress`,
+				],
+				{ stdin: "ignore", stdout: "pipe", stderr: "ignore", windowsHide: true },
+			);
+			const output = new Response(child.stdout).text();
+			if (!(await waitOrTimeout(child.exited, WINDOWS_RSS_TIMEOUT_MS))) {
+				child.kill();
+				return result;
+			}
+			const text = await output;
+			if (text.trim() !== "") {
+				const parsed: unknown = JSON.parse(text);
+				for (const value of Array.isArray(parsed) ? parsed : [parsed]) {
+					if (typeof value !== "object" || value === null) continue;
+					const row = value as { Id?: unknown; WorkingSet64?: unknown };
+					const pid = Number(row.Id);
+					const rssBytes = Number(row.WorkingSet64);
+					if (Number.isSafeInteger(pid) && pid > 0 && Number.isSafeInteger(rssBytes) && rssBytes >= 0) result.set(pid, rssBytes);
+				}
 			}
 		} catch {
 			// rss is informational; absence is reported as 0
@@ -1655,7 +1725,8 @@ export class Supervisor {
 				stdin: "pipe",
 				stdout: "pipe",
 				stderr: "pipe",
-				detached: true,
+				detached: process.platform !== "win32",
+				windowsHide: process.platform === "win32",
 				env: workerEnv,
 			});
 		} catch (err) {
@@ -1677,8 +1748,7 @@ export class Supervisor {
 			...(overnight === undefined ? {} : { overnight }),
 		};
 		try {
-			proc.stdin.write(`${JSON.stringify(launchSecrets)}\n`);
-			proc.stdin.flush();
+			writeWorkerLine(proc.stdin, `${JSON.stringify(launchSecrets)}\n`);
 		} catch (err) {
 			this.#log(`worker ${worker.id}: could not send launch secrets: ${err instanceof Error ? err.message : String(err)}`);
 		}
@@ -1686,7 +1756,8 @@ export class Supervisor {
 		worker.readyTimer = setTimeout(() => {
 			worker.fatalMessage ??= `worker did not become ready within ${readyTimeout} ms`;
 			worker.ready?.reject(new SupervisorError("internal", worker.fatalMessage));
-			killGroup(proc.pid, "SIGKILL");
+			if (process.platform === "win32") void killWindowsProcessTree(proc.pid);
+			else killGroup(proc.pid, "SIGKILL");
 		}, readyTimeout);
 		worker.pumps = Promise.all([this.#pumpStdout(worker, proc), this.#pumpStderr(worker, proc)]);
 		void proc.exited.then(code => this.#onExit(worker, proc, code));
@@ -1965,8 +2036,10 @@ export class Supervisor {
 		const deviceToken = worker.deviceToken;
 		worker.deviceToken = undefined;
 		if (deviceToken !== undefined) this.#opts.revokeWorkerToken?.(deviceToken);
-		// Sweep tool subprocesses the worker left in its process group; this also closes pipes a grandchild held open.
-		killGroup(proc.pid, "SIGKILL");
+		// Sweep worker subprocesses after every exit. POSIX kills the worker's process group, which outlives its leader.
+		// Windows has no groups and reuses PIDs: a tree kill rooted at an exited PID could hit an unrelated process, so
+		// Windows trees are only killed while the worker is alive (#terminate).
+		if (process.platform !== "win32") killGroup(proc.pid, "SIGKILL");
 		// Drain buffered stdout so a `fatal` line printed just before exit is not lost.
 		await waitOrTimeout(worker.pumps, 1_000);
 		if (worker.proc !== proc) return;
@@ -2030,7 +2103,7 @@ export class Supervisor {
 		}, delay);
 	}
 
-	/** stop command -> SIGTERM -> SIGKILL; resolves once the process is gone. */
+	/** Sends stop, then terminates the process tree if the worker does not exit. */
 	async #terminate(worker: Worker): Promise<void> {
 		clearTimeout(worker.restartTimer);
 		worker.restartTimer = undefined;
@@ -2043,15 +2116,29 @@ export class Supervisor {
 		const exited = worker.exited.promise;
 		const send = (command: WorkerCommand): void => {
 			try {
-				proc.stdin.write(`${JSON.stringify(command)}\n`);
-				proc.stdin.flush();
-				proc.stdin.end();
+				writeWorkerLine(proc.stdin, `${JSON.stringify(command)}\n`, true);
 			} catch {
 				// stdin already closed: the process is on its way out
 			}
 		};
 		send({ t: "stop" });
 		if (await waitOrTimeout(exited, this.#opts.stopGraceMs ?? DEFAULT_STOP_GRACE_MS)) return;
+		if (process.platform === "win32") {
+			this.#log(`worker ${worker.id} ignored stop; killing its process tree`);
+			await killWindowsProcessTree(proc.pid);
+			// The exit is reported shortly after taskkill returns; the grace configured for POSIX signals (tests use a few
+			// hundred ms) is too short for that, and returning before the exit lets a wake race the dying worker.
+			if (await waitOrTimeout(exited, WINDOWS_KILL_EXIT_WAIT_MS)) return;
+			// taskkill can fail (access denied, a hung tree); never let stop or shutdown wait forever.
+			this.#log(`worker ${worker.id} survived taskkill; terminating the process`);
+			try {
+				proc.kill();
+			} catch {
+				// already gone
+			}
+			await waitOrTimeout(exited, WINDOWS_KILL_EXIT_WAIT_MS);
+			return;
+		}
 		this.#log(`worker ${worker.id} ignored stop; sending SIGTERM`);
 		try {
 			proc.kill("SIGTERM");
@@ -2071,6 +2158,21 @@ function killGroup(pid: number, signal: NodeJS.Signals): void {
 		process.kill(-pid, signal);
 	} catch {
 		// group already gone
+	}
+}
+
+async function killWindowsProcessTree(pid: number): Promise<void> {
+	try {
+		const taskkill = Bun.spawn([path.join(process.env.SystemRoot ?? "C:\\Windows", "System32", "taskkill.exe"), "/PID", String(pid), "/T", "/F"], {
+			stdin: "ignore",
+			stdout: "ignore",
+			stderr: "ignore",
+			windowsHide: true,
+		});
+		// taskkill walks every process; never let one stuck walk hold up stop or shutdown.
+		if (!(await waitOrTimeout(taskkill.exited, WINDOWS_KILL_EXIT_WAIT_MS))) taskkill.kill();
+	} catch {
+		// The worker or its tree already exited.
 	}
 }
 

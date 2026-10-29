@@ -12,6 +12,7 @@
  * - Lightness and chroma are fixed per theme so chip text keeps >= 4.5:1 on its own chip background.
  */
 import type { WorkspaceKind } from "@omp-console/protocol";
+import { basename } from "./native-path";
 
 export type WorkspaceTheme = "light" | "dark";
 
@@ -194,14 +195,10 @@ export function hashName(name: string): number {
 	return h >>> 0;
 }
 
-function baseName(path: string): string {
-	const trimmed = path.replace(/\/+$/, "");
-	return trimmed.slice(trimmed.lastIndexOf("/") + 1);
-}
 
 /** The repo directory name a project's hue is seeded by. */
 export function colorSeed(workspace: ColorSubject): string {
-	const fromRoot = workspace.root === undefined ? "" : baseName(workspace.root);
+	const fromRoot = workspace.root === undefined ? "" : basename(workspace.root);
 	if (fromRoot !== "") return fromRoot.toLowerCase();
 	const fromId = workspace.id.slice(workspace.id.indexOf(":") + 1);
 	return (fromId || workspace.name).toLowerCase();

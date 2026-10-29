@@ -2,6 +2,7 @@ import type { EquivalenceTable } from "@omp-console/protocol";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { isEnoent } from "@oh-my-pi/pi-utils/fs-error";
+import { isWindows } from "../platform";
 
 export const QUOTA_TIERS = ["judgment", "build", "simple"] as const;
 export type QuotaTier = (typeof QUOTA_TIERS)[number];
@@ -150,9 +151,9 @@ export class EquivalenceStore {
 		const temporary = `${this.#file}.${crypto.randomUUID()}.tmp`;
 		try {
 			await fs.writeFile(temporary, `${JSON.stringify(table)}\n`, { encoding: "utf8", flag: "wx", mode: 0o600 });
-			await fs.chmod(temporary, 0o600);
+			if (!isWindows) await fs.chmod(temporary, 0o600);
 			await fs.rename(temporary, this.#file);
-			await fs.chmod(this.#file, 0o600);
+			if (!isWindows) await fs.chmod(this.#file, 0o600);
 		} catch (error) {
 			await fs.rm(temporary, { force: true }).catch(() => {});
 			throw error;

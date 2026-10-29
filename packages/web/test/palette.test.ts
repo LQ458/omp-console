@@ -8,6 +8,7 @@ import {
 	rankModels,
 	routeCommand,
 	withOvernightCommand,
+	withTourCommand,
 	splitPaletteQuery,
 } from "../src/lib/palette";
 
@@ -94,6 +95,13 @@ describe("palette routing", () => {
 		expect(matches).toHaveLength(1);
 		expect(routeCommand(matches[0]!)).toEqual({ kind: "panel", panel: "overnight", text: "/overnight" });
 		expect(withOvernightCommand([...COMMANDS, conflictingDaemonCommand], false).some(command => command.name === "overnight")).toBe(false);
+	});
+
+	it("routes the web-owned /tour command and replaces a daemon command with the same name", () => {
+		const commands = withTourCommand([...COMMANDS, cmd("tour", { description: "Daemon tour" })]);
+		const tour = commands.filter(command => command.name === "tour");
+		expect(tour).toHaveLength(1);
+		expect(routeCommand(tour[0]!)).toEqual({ kind: "panel", panel: "tour", text: "/tour" });
 	});
 
 	it("opens the terminal command panels with their typed arguments", () => {

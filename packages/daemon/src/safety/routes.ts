@@ -1,10 +1,12 @@
 import type { ApiError, DriftSuggestion, GateStatusResponse, MoveConfirmRequest, MovePrepareRequest } from "@omp-console/protocol";
+import { isWindows } from "../platform";
 import { errorResponse, json } from "../api";
 import { readGateStatus, type GateOptions } from "./gate";
 import { DriftTracker, type DriftOptions } from "./drift";
 import { MoveError, MoveService, type MoveServiceOptions } from "./move";
 import { MoveFileError } from "./files";
 import type { SafetyPorts } from "./ports";
+
 
 const SESSION_DRIFT_ROUTE = /^\/api\/sessions\/([^/]+)\/drift(?:\/([^/]+)\/dismiss)?$/;
 const MOVES_ROUTE = /^\/api\/moves(?:\/([^/]+)(?:\/(confirm|undo))?)?$/;
@@ -159,6 +161,7 @@ export function createSafetyRoutes(
 
 		const movesMatch = MOVES_ROUTE.exec(url.pathname);
 		if (!movesMatch) return undefined;
+		if (isWindows) return errorResponse(409, "conflict", "Project moves require the macOS app");
 		if (!moves) return undefined;
 		try {
 			if (!movesMatch[1]) {

@@ -104,6 +104,7 @@ import type {
 	CreateAgendaTodoRequest,
 	KeybindingsResponse,
 	LinkAgendaTodoRequest,
+	NewSessionBrowseResponse,
 	NewSessionSuggestions,
 	PathSuggestions,
 	PeersResponse,
@@ -757,6 +758,11 @@ export class DeckApi {
 	pathSuggestions(query: string, signal?: AbortSignal): Promise<PathSuggestions> {
 		const params = new URLSearchParams({ q: query });
 		return this.#request<PathSuggestions>("GET", `/new-session/paths?${params}`, undefined, signal);
+	}
+	// ux-folder: project-folder browsing API.
+	browseNewSession(dir?: string, signal?: AbortSignal): Promise<NewSessionBrowseResponse> {
+		const query = dir === undefined ? "" : `?${new URLSearchParams({ dir })}`;
+		return this.#request<NewSessionBrowseResponse>("GET", `/new-session/browse${query}`, undefined, signal);
 	}
 	// p1-sessions API methods
 	sessionTranscript(sessionId: string, signal?: AbortSignal): Promise<SessionTranscriptResponse> {

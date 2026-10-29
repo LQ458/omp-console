@@ -6,6 +6,7 @@ import type { DeckApi } from "../../lib/api";
 import { relTime } from "../../lib/format";
 import { recordUsage } from "../../lib/journal";
 import { canUndo, moveStateLabel, undoMove } from "../../lib/move";
+import { basename } from "../../lib/native-path";
 import "./safety.css";
 
 export interface MoveHistoryProps {
@@ -80,7 +81,7 @@ export function MoveHistory({ api }: MoveHistoryProps): ReactNode {
 							{record.error && <span className="sf-slug-error">{record.error}</span>}
 							{record.state === "undone" && record.trashPath && (
 								<span className="ws-muted">
-									Copy moved to the Trash as <code>{record.trashPath.split("/").pop()}</code>
+									<code>{record.trashPath.endsWith("/") || record.trashPath.endsWith("\\") ? "" : basename(record.trashPath)}</code>
 								</span>
 							)}
 							{notes[record.id] && (

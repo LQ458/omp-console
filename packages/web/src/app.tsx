@@ -11,6 +11,7 @@ import type {
 } from "@omp-console/protocol";
 import type { AssistantMessage, CollabUiRequest, SessionEntry } from "@oh-my-pi/pi-wire";
 import type { ReactNode } from "react";
+import { basename } from "./lib/native-path";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PanelLeftOpen } from "lucide-react";
 import { type PaneSessionArgs, usePaneState, usePoolSnapshot } from "./components/panes/context";
@@ -27,6 +28,7 @@ import { Sheet } from "./components/shell/Sheet";
 import type { SettingsScope } from "./components/shell/SettingsSheet";
 import { OvernightSheet } from "./components/overnight/OvernightSheet";
 import { Toasts } from "./components/shell/Toasts";
+import { Tour } from "./components/tour/Tour";
 import { LazyRegion } from "./components/shell/LazyRegion";
 import { lazyWithRecovery } from "./lib/lazy";
 import { handleGlobalSettingsShortcut, registerNativeMenuActions } from "./lib/settings-actions";
@@ -86,6 +88,7 @@ import { handleServiceWorkerMessage } from "./lib/sw-messages";
 import { useGuestSelector } from "./lib/use-guest";
 import { type GuestSwitcher, useSwitcherSnapshot } from "./lib/use-switcher";
 import { trackViewport } from "./lib/viewport";
+import { hasSeenTour, shouldAutoShowTour } from "./lib/tour";
 import type { ToolRenderHost } from "./tool-render";
 import "./components/shell/shell.css";
 import "./components/shell/mobile.css";
@@ -245,8 +248,7 @@ function createPaneModel(): PaneModel {
 }
 
 function folderName(cwd: string): string {
-	const trimmed = cwd.replace(/\/+$/, "");
-	return trimmed.slice(trimmed.lastIndexOf("/") + 1) || trimmed || "session";
+	return basename(cwd) || "session";
 }
 
 /** Distinct React key per client so session-local UI state (rail, drawer) resets on a switch. */
@@ -389,6 +391,9 @@ function Deck({ api, capabilities, onCapabilitiesChanged }: {
 	const [standalone] = useState(isStandaloneDisplay);
 	const [sidebarOpen, setSidebarOpen] = useState(readSidebarOpen);
 	useEffect(() => writeSidebarOpen(sidebarOpen), [sidebarOpen]);
+	const [tourOpen, setTourOpen] = useState(false);
+	const [autoTourPending, setAutoTourPending] = useState(() => !hasSeenTour());
+	const [homePickerState, setHomePickerState] = useState<"idle" | "opening" | "open">("idle");
 	const [sheet, setSheet] = useState<SheetName | null>(null);
 	const [claudeImportOpen, setClaudeImportOpen] = useState(false);
 	const [overnightTarget, setOvernightTarget] = useState<{ sessionId?: string; cwd?: string; task?: string } | null>(null);
@@ -541,6 +546,53 @@ function Deck({ api, capabilities, onCapabilitiesChanged }: {
 		setSheet(null);
 		setOvernightTarget(null);
 	}, []);
+	// Home and shell controls live in separate components; mark them without coupling the tour to either.
+	useEffect(() => {
+		const markers = [
+			{ selector: ".sh-connect-card", id: "main-pane" },
+			{ selector: 'button[aria-label="settings"]', id: "settings" },
+			{ selector: 'button[aria-label="keyboard shortcuts"]', id: "help" },
+		] as const;
+		for (const { selector, id } of markers) {
+			for (const element of document.querySelectorAll<HTMLElement>(selector)) {
+				if (element.dataset.tour !== id) element.dataset.tour = id;
+			}
+		}
+	});
+	useEffect(() => {
+		if (!autoTourPending || tourOpen) return;
+		const tryOpen = (): void => {
+			const pickerOpen = document.querySelector<HTMLButtonElement>('[aria-label="new session"]')?.getAttribute("aria-expanded") === "true";
+			if (homePickerState === "opening") {
+				if (!pickerOpen) return;
+				setHomePickerState("open");
+				return;
+			}
+			if (homePickerState === "open") {
+				if (pickerOpen) return;
+				setHomePickerState("idle");
+			}
+			const conditions = {
+				paired: true,
+				seen: hasSeenTour(),
+				surfaceReady: document.querySelector('.sh-connect[data-state="idle"], .sh-app') !== null,
+				checklistOpen: document.querySelector(".dk-setup-checklist") !== null,
+				modalOpen: sheet !== null || claudeImportOpen || pickerOpen || document.querySelector('[aria-modal="true"]') !== null,
+			};
+			if (!shouldAutoShowTour(conditions)) return;
+			setAutoTourPending(false);
+			setTourOpen(true);
+		};
+		const observer = new MutationObserver(tryOpen);
+		observer.observe(document.body, {
+			childList: true,
+			subtree: true,
+			attributes: true,
+			attributeFilter: ["aria-modal", "aria-hidden", "aria-expanded", "hidden", "inert", "class", "style", "data-tour", "data-mode", "data-state"],
+		});
+		tryOpen();
+		return () => observer.disconnect();
+	}, [autoTourPending, tourOpen, sheet, claudeImportOpen, homePickerState]);
 
 	// The workspaces sheet and quick-ask replace whatever sheet the button was pressed in (phone session list).
 	useEffect(() => {
@@ -561,6 +613,11 @@ function Deck({ api, capabilities, onCapabilitiesChanged }: {
 			if (detail?.panel === "claude-import") {
 				setSheet(null);
 				setClaudeImportOpen(true);
+			} else if (detail?.panel === "tour") {
+				setSheet(null);
+				setClaudeImportOpen(false);
+				setAutoTourPending(false);
+				setTourOpen(true);
 			} else if (detail?.panel === "overnight") {
 				setOvernightTarget({
 					sessionId: detail.sessionId,
@@ -1034,8 +1091,9 @@ function Deck({ api, capabilities, onCapabilitiesChanged }: {
 			return;
 		}
 		setSidebarOpen(true);
+		if (autoTourPending) setHomePickerState("opening");
 		setComposeRequest(n => n + 1);
-	}, [mode]);
+	}, [mode, autoTourPending]);
 	const openStatus = useCallback(() => setSheet("status"), []);
 	const openGlobalSettings = useCallback(() => {
 		setSettingsScope("global");
@@ -1533,6 +1591,7 @@ function Deck({ api, capabilities, onCapabilitiesChanged }: {
 					Opening session…
 				</div>
 			)}
+			{tourOpen && <Tour onClose={() => setTourOpen(false)} />}
 		</div>
 	);
 }

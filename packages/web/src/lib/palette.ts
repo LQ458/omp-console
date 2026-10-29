@@ -20,6 +20,19 @@ export function withOvernightCommand(commands: readonly CatalogCommand[], enable
 	return enabled ? [...available, OVERNIGHT_COMMAND] : available;
 }
 
+const TOUR_COMMAND: CatalogCommand = {
+	name: "tour",
+	description: "Show the first-visit tour.",
+	source: "builtin",
+	remote: false,
+	deckControl: "tour",
+};
+
+/** Replaces a daemon `/tour` command with the web-owned first-visit tour. */
+export function withTourCommand(commands: readonly CatalogCommand[]): CatalogCommand[] {
+	return [...commands.filter(command => command.name !== TOUR_COMMAND.name), TOUR_COMMAND];
+}
+
 // ---- window events -----------------------------------------------------------------------------
 
 /** `omp-console:open-panel`: the shell listens and opens the panel named `detail.panel` (e.g. `status`, `spawn`, `catalog`). */

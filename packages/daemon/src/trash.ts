@@ -8,6 +8,8 @@ export interface TrashOptions {
 	/** The system Trash; default `~/.Trash` on macOS and none elsewhere. `null`: always the daemon's own folder. */
 	systemTrashDir?: string | null;
 	now?: () => Date;
+	/** Test seam for exercising cross-device rename fallback. */
+	rename?: (source: string, destination: string) => Promise<void>;
 }
 
 function stamp(date: Date): string {
@@ -41,19 +43,24 @@ async function sessionParts(sessionFile: string): Promise<string[]> {
 }
 
 /** Moves every part into a new folder under `base`, all or nothing. */
-async function moveInto(base: string, folderName: string, parts: readonly string[]): Promise<string> {
+async function moveInto(
+	base: string,
+	folderName: string,
+	parts: readonly string[],
+	rename: (source: string, destination: string) => Promise<void>,
+): Promise<string> {
 	const folder = await uniqueFolder(base, folderName);
 	const moved: Array<[string, string]> = [];
 	try {
 		for (const part of parts) {
 			const target = path.join(folder, path.basename(part));
-			await fs.rename(part, target);
+			await rename(part, target);
 			moved.push([target, part]);
 		}
 		return folder;
 	} catch (error) {
 		// Never leave a session half in the Trash: put back what already moved.
-		for (const [target, original] of moved.reverse()) await fs.rename(target, original).catch(() => {});
+		for (const [target, original] of moved.reverse()) await rename(target, original).catch(() => {});
 		await fs.rmdir(folder).catch(() => {});
 		throw error;
 	}
@@ -70,12 +77,21 @@ export async function moveSessionToTrash(sessionFile: string, options: TrashOpti
 	const when = stamp((options.now ?? (() => new Date()))());
 	const name = path.basename(sessionFile, ".jsonl");
 	const parts = await sessionParts(sessionFile);
+	const rename = options.rename ?? fs.rename;
 	if (systemTrash !== null) {
 		try {
-			return await moveInto(systemTrash, `omp-console session ${when} ${name}`, parts);
+			return await moveInto(systemTrash, `omp-console session ${when} ${name}`, parts, rename);
 		} catch {}
 	}
 	const own = path.join(options.stateDir, "trash");
 	await fs.mkdir(own, { recursive: true, mode: 0o700 });
-	return moveInto(own, `${when}-${name}`, parts);
+	try {
+		return await moveInto(own, `${when}-${name}`, parts, rename);
+	} catch (error) {
+		if ((error as NodeJS.ErrnoException).code !== "EXDEV") throw error;
+		// A sibling folder keeps the fallback rename on the session file's volume and avoids copying transcript data.
+		const fileVolumeTrash = path.join(path.dirname(sessionFile), ".omp-console-trash");
+		await fs.mkdir(fileVolumeTrash, { recursive: true, mode: 0o700 });
+		return moveInto(fileVolumeTrash, `${when}-${name}`, parts, rename);
+	}
 }

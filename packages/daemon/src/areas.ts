@@ -6,6 +6,7 @@
 import { existsSync, realpathSync } from "node:fs";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { sessionPathKey } from "./session-key";
 import type { AgendaAskResponse, CreateSessionRequest, HistoryEdge, KeyPoints, QuickAskSource, SessionSummary, WorkspaceKind } from "@omp-console/protocol";
 import type { FeatureSettings } from "./config";
 import { type AgendaHubConfig, AgendaAskError, type AgendaRouteOptions } from "./agenda/ports";
@@ -87,17 +88,18 @@ class HiddenFiles {
 	async load(): Promise<void> {
 		try {
 			const value = JSON.parse(await fs.readFile(this.#file, "utf8")) as unknown;
-			if (Array.isArray(value)) for (const entry of value) if (typeof entry === "string") this.#files.add(entry);
+			if (Array.isArray(value)) for (const entry of value) if (typeof entry === "string") this.#files.add(sessionPathKey(entry));
 		} catch {}
 	}
 
 	has(file: string): boolean {
-		return this.#files.has(file);
+		return this.#files.has(sessionPathKey(file));
 	}
 
 	async add(file: string): Promise<void> {
-		if (this.#files.has(file)) return;
-		this.#files.add(file);
+		const key = sessionPathKey(file);
+		if (this.#files.has(key)) return;
+		this.#files.add(key);
 		await fs.writeFile(this.#file, JSON.stringify([...this.#files]), { mode: 0o600 });
 	}
 }

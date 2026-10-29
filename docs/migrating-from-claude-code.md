@@ -10,8 +10,8 @@ The panel reports whether each folder exists, groups conversations by project pa
 ## Import conversations
 
 1. Select conversations under Claude Code or Codex. Use **Select all** to select all eligible conversations for that source.
-2. Choose **Import** and wait for the per-source progress and results.
-3. Choose **Open copy** beside an imported conversation to continue it in omp.
+2. Choose **Import selected** and wait for the per-source progress and results.
+3. Choose **Open** beside an imported conversation to continue it in omp.
 
 Imports create omp session copies in the daemon's normal session store; they do not edit or delete source transcripts. Re-importing the same source transcript returns its existing omp session instead of making a duplicate. Opening an imported conversation forks from the copy: the terminal session is unchanged. Malformed or unsupported transcripts are reported individually.
 

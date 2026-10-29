@@ -28,6 +28,7 @@ import { Settings } from "@oh-my-pi/pi-coding-agent/config/settings";
 import { cfgCommandsEnableClaudeUser, cfgSkillsEnableClaudeUser } from "@oh-my-pi/pi-coding-agent/extensibility/settings";
 import { errorResponse, json } from "../api";
 import { atomicWriteFile } from "../workspaces/files";
+import { isWindows } from "../platform";
 
 const IMPORTS_FILE = "foreign-session-imports.json";
 const MAX_IMPORT_IDS = 100;
@@ -90,7 +91,7 @@ function sourceFor(url: URL): ClaudeImportSource {
 }
 
 function sourceDirectory(source: ClaudeImportSource): string {
-	const home = process.env.HOME?.trim() || os.homedir();
+	const home = isWindows ? os.homedir() : process.env.HOME?.trim() || os.homedir();
 	return source === "claude" ? resolveClaudePaths(home).configDir : path.join(home, ".codex");
 }
 

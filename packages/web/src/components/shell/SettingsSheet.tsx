@@ -30,6 +30,7 @@ import { QuickRepliesSettings } from "./QuickRepliesSettings";
 import { OvernightSettings } from "../overnight/OvernightSettings";
 import { FeaturesSettings } from "./FeaturesSettings";
 import { openPanel } from "../../lib/palette";
+import { requestTourReplay } from "../../lib/tour";
 import { Sheet } from "./Sheet";
 import "./global-settings.css";
 const HistoryPanel = lazyWithRecovery(() => import("../history/HistoryPanel").then(({ HistoryPanel: component }) => ({ default: component })));
@@ -221,6 +222,7 @@ function GlobalSettingsSheet({
 						<button type="button" className="dk-wide-btn" onClick={() => openPanel({ panel: "setup" })}>
 							Get started
 						</button>
+						<button type="button" className="dk-wide-btn" onClick={() => requestTourReplay()}>Show tour</button>
 						<button type="button" className="dk-wide-btn" onClick={() => openPanel({ panel: "claude-import" })}>
 							Import from Claude Code
 						</button>

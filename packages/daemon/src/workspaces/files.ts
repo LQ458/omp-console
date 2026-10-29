@@ -1,5 +1,6 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { isWindows } from "../platform";
 
 function isMissing(error: unknown): boolean {
 	return typeof error === "object" && error !== null && "code" in error && error.code === "ENOENT";
@@ -36,7 +37,7 @@ export async function atomicWriteFile(filePath: string, content: string, mode: n
 	const directory = path.dirname(filePath);
 	await fs.mkdir(directory, { recursive: true });
 	const temporaryPath = path.join(directory, `.${path.basename(filePath)}.${crypto.randomUUID()}.tmp`);
-	const handle = await fs.open(temporaryPath, "wx", mode);
+	const handle = isWindows ? await fs.open(temporaryPath, "wx") : await fs.open(temporaryPath, "wx", mode);
 	try {
 		await handle.writeFile(content, "utf8");
 		await handle.sync();

@@ -20,7 +20,7 @@ describe("device pairing", () => {
 		const codePath = path.join(t.stateDir, "pairing-code");
 		const startupCode = fs.readFileSync(codePath, "utf8").trim();
 		expect(startupCode).toMatch(/^[0-9A-HJKMNP-TV-Z]{4}-[0-9A-HJKMNP-TV-Z]{4}$/);
-		expect(fs.statSync(codePath).mode & 0o777).toBe(0o600);
+		if (process.platform !== "win32") expect(fs.statSync(codePath).mode & 0o777).toBe(0o600);
 
 		const first = await t.unauthenticated("/api/pair", "POST", { code: startupCode, label: "Desktop" });
 		expect(first.status).toBe(200);
@@ -52,7 +52,7 @@ describe("device pairing", () => {
 		expect(devices.currentDeviceId).toBe(firstDevice.deviceId);
 
 		const persisted = JSON.parse(fs.readFileSync(path.join(t.stateDir, "devices.json"), "utf8")) as Array<Record<string, unknown>>;
-		expect(fs.statSync(path.join(t.stateDir, "devices.json")).mode & 0o777).toBe(0o600);
+		if (process.platform !== "win32") expect(fs.statSync(path.join(t.stateDir, "devices.json")).mode & 0o777).toBe(0o600);
 		expect(persisted).toHaveLength(1);
 		expect(persisted[0]?.tokenHash).toMatch(/^[a-f0-9]{64}$/);
 		expect(JSON.stringify(persisted)).not.toContain(firstCookie.slice(`${COOKIE_NAME}=`.length));
@@ -140,12 +140,16 @@ describe("device pairing", () => {
 		const paired = await store.pair(code, "Phone");
 		if (!paired.ok) throw new Error(`pairing failed: ${paired.reason}`);
 		const bearer = new Headers({ authorization: `Bearer ${paired.token}` });
-		fs.chmodSync(stateDir, 0o500);
+		const devicesFile = path.join(stateDir, "devices.json");
+		const savedDevicesFile = `${devicesFile}.saved`;
+		fs.renameSync(devicesFile, savedDevicesFile);
+		fs.mkdirSync(devicesFile);
 		try {
 			await expect(store.remove(paired.device.id)).rejects.toThrow();
 			expect(await store.authenticate(bearer)).toBe(paired.device.id);
 		} finally {
-			fs.chmodSync(stateDir, 0o700);
+			fs.rmSync(devicesFile, { recursive: true, force: true });
+			fs.renameSync(savedDevicesFile, devicesFile);
 		}
 		expect(await store.remove(paired.device.id)).toBe(true);
 		expect(await store.authenticate(bearer)).toBeUndefined();
@@ -213,7 +217,7 @@ describe("device pairing", () => {
 		const session = (await created.json()) as { id: string };
 		for (let attempt = 0; attempt < 100 && !fs.existsSync(tokenPath); attempt++) await Bun.sleep(10);
 		const token = fs.readFileSync(tokenPath, "utf8").trim();
-		expect(fs.statSync(tokenPath).mode & 0o777).toBe(0o600);
+		if (process.platform !== "win32") expect(fs.statSync(tokenPath).mode & 0o777).toBe(0o600);
 		expect(token).toMatch(/^[A-Za-z0-9_-]{43}$/);
 		const workerRequest = (): Promise<Response> => t.unauthenticated("/api/health", "GET", undefined, { Authorization: `Bearer ${token}` });
 		expect((await workerRequest()).status).toBe(200);

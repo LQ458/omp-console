@@ -3,11 +3,12 @@ import { getAgentDir, getSessionsDir } from "@oh-my-pi/pi-utils/dirs";
 import type { DaemonCapabilities, OptionalFeatureName, QuickAskSource, SessionSummary } from "@omp-console/protocol";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import * as os from "node:os";
 import { createApi, errorResponse, json, type RestartNotice } from "./api";
 import { type AreaOptions, type Areas, createAreas } from "./areas";
 import { createDaemonConfigRoutes, MAX_CONFIG_BODY_BYTES } from "./config-routes";
 import type { ConfigFlagField, FeatureSettings } from "./config";
-import { computerUseSupported } from "./platform";
+import { isWindows, privateFileProblem, computerUseSupported, secureWindowsStateDirectory } from "./platform";
 import { checkFetchSite, checkRequest, normalizeAllowedHosts } from "./auth";
 import { Journal } from "./journal";
 import { PushStore } from "./push";
@@ -89,9 +90,8 @@ async function loadPeerCredentials(peers: readonly PeerDaemon[]): Promise<PeerDa
 		}
 		try {
 			const stat = await fs.lstat(peer.tokenFile);
-			if (!stat.isFile() || stat.isSymbolicLink() || (stat.mode & 0o777) !== 0o600) {
-				throw new Error("tokenFile must be a regular file with mode 0600");
-			}
+			const problem = privateFileProblem(stat);
+			if (problem !== undefined) throw new Error(`tokenFile ${problem}`);
 			const token = (await fs.readFile(peer.tokenFile, "utf8")).trim();
 			if (!isDeviceToken(token)) throw new Error("tokenFile does not contain a 32-byte base64url device token");
 			return { ...peer, token };
@@ -405,6 +405,11 @@ async function validateStoredSession(session: StoredSession, sessionsDir: string
 }
 
 export async function startDaemon(options: DaemonOptions): Promise<Daemon> {
+	if (isWindows) {
+		// Private files on Windows rely on this folder's ACL; set it before any of them is read or written.
+		await fs.mkdir(options.stateDir, { recursive: true });
+		secureWindowsStateDirectory(options.stateDir);
+	}
 	const envKeys = await loadStateEnvironment(options.stateDir);
 	const log = options.log ?? (() => {});
 	const platform = options.platform ?? process.platform;
@@ -435,7 +440,7 @@ export async function startDaemon(options: DaemonOptions): Promise<Daemon> {
 	};
 	await fs.mkdir(options.stateDir, { recursive: true, mode: 0o700 });
 	const pairingFile = path.join(options.stateDir, "pairing-code");
-	const defaultPairingFile = path.join(process.env.HOME ?? "", ".omp-console", "pairing-code");
+	const defaultPairingFile = path.join(isWindows ? os.homedir() : process.env.HOME ?? "", ".omp-console", "pairing-code");
 	const displayPairingFile = path.resolve(pairingFile) === path.resolve(defaultPairingFile) ? "~/.omp-console/pairing-code" : pairingFile;
 	const onPairingCode = options.onPairingCode ?? (() => process.stdout.write(`pairing code issued, see ${displayPairingFile}\n`));
 	const deviceAuth = await DeviceAuthStore.open(options.stateDir, onPairingCode);

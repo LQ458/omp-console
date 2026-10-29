@@ -3,7 +3,7 @@ import type { AgendaItem, AgendaToday, CardStatus, ReturnBrief as ReturnBriefDat
 import { renderToStaticMarkup } from "react-dom/server";
 import { AgendaSessionActionView } from "../src/components/agenda/AgendaSessionAction";
 import { AgendaTaskRow, agendaDueLabel, agendaShouldShow, agendaTaskPrompt } from "../src/components/agenda/AgendaStrip";
-import { NewSessionPicker, pickerIndexAfterMove, requestForPickerOption } from "../src/components/newsession/NewSessionPicker";
+import { newFolderPath, newSessionBreadcrumbs, pickerIndexAfterMove, requestForPickerOption } from "../src/components/newsession/NewSessionPicker";
 import { SessionCardList, turnElapsed } from "../src/components/switcher/SessionCardList";
 import {
 	groupSessionCards,
@@ -13,7 +13,6 @@ import {
 	undoCardTitleOptimistically,
 	visibleCardsInGroup,
 } from "../src/lib/cards";
-import { DEFAULT_OVERNIGHT_TEMPLATE } from "../src/lib/overnight";
 
 function summary(id: string, lastActivityAt: number, extra: Partial<SessionSummary> = {}): SessionSummary {
 	return {
@@ -225,6 +224,19 @@ describe("session card grouping", () => {
 		expect(groups.map(group => group.label)).toEqual(["/work/alpha", "/work/beta"]);
 		expect(groups[0]?.cards.map(item => item.card.sessionId)).toEqual(["alpha-recent", "alpha-old"]);
 		expect(groups.flatMap(group => group.cards.map(item => item.card.sessionId))).toHaveLength(3);
+	});
+	it("groups equivalent Windows working-directory spellings together without folding POSIX case", () => {
+		const folders = [
+			cardView(card("windows-a", "done", NOW, { cwd: "C:\\Users\\Leo\\repo" })),
+			cardView(card("windows-b", "done", NOW, { cwd: "c:/users/leo/REPO" })),
+			cardView(card("posix-a", "done", NOW, { cwd: "/work/Repo" })),
+			cardView(card("posix-b", "done", NOW, { cwd: "/work/repo" })),
+		];
+		const groups = groupSessionCards(folders, [], "folder", NOW);
+		expect(groups).toHaveLength(3);
+		expect(groups.find(group => group.label === "C:\\Users\\Leo\\repo")?.cards.map(item => item.card.sessionId)).toEqual(["windows-a", "windows-b"]);
+		expect(groups.some(group => group.label === "/work/Repo")).toBe(true);
+		expect(groups.some(group => group.label === "/work/repo")).toBe(true);
 	});
 
 	it("labels terminal sessions and saved sessions distinctly and explains copy/read-only opening", () => {
@@ -557,33 +569,22 @@ describe("new session picker", () => {
 			cwd: "/work/new-project",
 			createDirectory: true,
 		});
-		expect(requestForPickerOption({ kind: "new" }, "")).toBeNull();
+	});
+	it("builds home-relative breadcrumbs and joins paths with native separators", () => {
+		expect(newSessionBreadcrumbs("/home/alice", "/home/alice/projects/app")).toEqual([
+			{ label: "Home", path: "/home/alice" },
+			{ label: "projects", path: "/home/alice/projects" },
+			{ label: "app", path: "/home/alice/projects/app" },
+		]);
+		expect(newSessionBreadcrumbs("C:\\Users\\Leo", "C:\\Users\\Leo\\code\\app")).toEqual([
+			{ label: "Home", path: "C:\\Users\\Leo" },
+			{ label: "code", path: "C:\\Users\\Leo\\code" },
+			{ label: "app", path: "C:\\Users\\Leo\\code\\app" },
+		]);
+		expect(newFolderPath("C:\\Users\\Leo\\Projects", " test-app ")).toBe("C:\\Users\\Leo\\Projects\\test-app");
+		expect(newFolderPath("/home/alice/projects", "test-app")).toBe("/home/alice/projects/test-app");
 	});
 
-	it("shows the plain project-folder choice and keeps optional features out of the first flow", () => {
-		const html = renderToStaticMarkup(
-			<NewSessionPicker
-				api={{
-					newSessionSuggestions: async () => ({ recent: [], roots: [] }),
-					pathSuggestions: async () => ({ matches: [] }),
-					getOvernightTemplate: async () => DEFAULT_OVERNIGHT_TEMPLATE,
-					getOvernightPreflight: async () => ({ checks: [] }),
-				}}
-				busy={false}
-				initialPath={null}
-				onCreate={() => {}}
-				onClose={() => {}}
-			/>,
-		);
-		expect(html).toContain("Start a session");
-		expect(html).toContain("Choose a project folder");
-		expect(html).toContain("Choose another folder…");
-		expect(html).toContain("Model (optional)");
-		expect(html).not.toContain("More options");
-		expect(html).not.toContain("Overnight run");
-		expect(html).not.toContain("Session templates");
-		expect(html).not.toContain("open=\"\"");
-	});
 });
 
 describe("return brief and agenda visibility", () => {

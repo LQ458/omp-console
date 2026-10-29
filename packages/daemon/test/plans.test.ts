@@ -157,7 +157,7 @@ describe("draft plan runner", () => {
 		const rows = fs.readFileSync(logFile, "utf8").trim().split("\n").map(line => JSON.parse(line) as { state: string; nodes: Array<{ state: string }> });
 		expect(rows.length).toBeGreaterThan(3);
 		expect(rows.some(row => row.state === "done")).toBe(true);
-		expect(fs.statSync(logFile).mode & 0o777).toBe(0o600);
+		if (process.platform !== "win32") expect(fs.statSync(logFile).mode & 0o777).toBe(0o600);
 		expect(fs.readFileSync(logFile, "utf8")).not.toContain("Build the shared base");
 	});
 
@@ -311,7 +311,7 @@ describe("draft plan HTTP routes and templates", () => {
 		expect(saved?.status).toBe(200);
 		expect(await saved!.json()).toEqual({ name: "Reusable plan", nodes: [] });
 		const file = path.join(root, "plan-templates", "Reusable plan.json");
-		expect(fs.statSync(file).mode & 0o777).toBe(0o600);
+		if (process.platform !== "win32") expect(fs.statSync(file).mode & 0o777).toBe(0o600);
 
 		const listed = await requestRoute(routes, "GET", "/api/plan-templates");
 		expect(listed?.status).toBe(200);

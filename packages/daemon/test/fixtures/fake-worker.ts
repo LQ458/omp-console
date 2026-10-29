@@ -5,7 +5,7 @@
  *
  *   --ignore-stop            keep running after the `stop` command and stdin EOF
  *   --ignore-term            swallow SIGTERM (only SIGKILL ends the process)
- *   --spawn-child <pidfile>  start `sleep 300` in the worker's process group and append its pid (one line per launch)
+ *   --spawn-child <pidfile>  start a child process in the worker's process tree and append its pid (one line per launch)
  *   --dump <file>            append {argv, key, token} for each launch as one JSON line
  *   --dump-device-token <file>  write the launch-only device token to a private test file
  *   --crash-after <ms>       exit 1 this long after ready
@@ -137,7 +137,10 @@ if (deviceTokenDump) {
 
 const childPidFile = value("--spawn-child");
 if (childPidFile) {
-	const child = Bun.spawn(["sleep", "300"], { stdin: "ignore", stdout: "ignore", stderr: "ignore" });
+	const child = Bun.spawn(
+		process.platform === "win32" ? [process.execPath, "-e", "setInterval(() => {}, 1000)"] : ["sleep", "300"],
+		{ stdin: "ignore", stdout: "ignore", stderr: "ignore", windowsHide: process.platform === "win32" },
+	);
 	appendFileSync(childPidFile, `${child.pid}\n`);
 }
 

@@ -182,14 +182,14 @@ describe("GET and DELETE /api/journal", () => {
 });
 
 describe("storage", () => {
-	it("creates both files mode 0600, and tightens a pre-existing looser file", async () => {
+	it("creates both files and tightens a pre-existing looser mode on POSIX", async () => {
 		const t = await startTestDaemon();
 		fs.writeFileSync(journalFile(t), "", { mode: 0o644 });
-		fs.chmodSync(journalFile(t), 0o644);
+		if (process.platform !== "win32") fs.chmodSync(journalFile(t), 0o644);
 		await t.post("/api/journal", { events: [event()] });
 		await t.post("/api/feedback", { at: 1, screen: "s", text: "t" });
 		for (const file of [journalFile(t), feedbackFile(t)]) {
-			expect(fs.statSync(file).mode & 0o777).toBe(0o600);
+			if (process.platform !== "win32") expect(fs.statSync(file).mode & 0o777).toBe(0o600);
 		}
 	});
 
@@ -206,7 +206,7 @@ describe("storage", () => {
 		expect(fs.existsSync(`${current}.2`)).toBe(false);
 		expect(fs.statSync(current).size).toBeLessThanOrEqual(700);
 		expect(fs.statSync(`${current}.1`).size).toBeLessThanOrEqual(700);
-		expect(fs.statSync(`${current}.1`).mode & 0o777).toBe(0o600);
+		if (process.platform !== "win32") expect(fs.statSync(`${current}.1`).mode & 0o777).toBe(0o600);
 
 		const stored = (await readBack(t, 1000)).events.map(row => row.action);
 		// Whatever survived is a contiguous, ordered tail of what was written; the oldest rows aged out.

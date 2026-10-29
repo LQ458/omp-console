@@ -7,6 +7,7 @@ import { isEnoent } from "@oh-my-pi/pi-utils";
 import { listAllSessions } from "@oh-my-pi/pi-coding-agent/session/session-listing";
 import { SessionManager } from "@oh-my-pi/pi-coding-agent/session/session-manager";
 import { FileSessionStorage } from "@oh-my-pi/pi-coding-agent/session/session-storage";
+import { sessionPathKey } from "./session-key";
 
 export type RecentSessionLister = () => Promise<SessionSummary[]>;
 
@@ -72,7 +73,8 @@ export function firstPromptFromHead(head: string): string | undefined {
 const promptCache = new Map<string, { mtimeMs: number; title: string | undefined }>();
 
 function titleFromFile(file: string, mtimeMs: number): string | undefined {
-	const cached = promptCache.get(file);
+	const key = sessionPathKey(file);
+	const cached = promptCache.get(key);
 	if (cached && cached.mtimeMs === mtimeMs) return cached.title;
 	let title: string | undefined;
 	try {
@@ -87,7 +89,7 @@ function titleFromFile(file: string, mtimeMs: number): string | undefined {
 	} catch {
 		title = undefined;
 	}
-	promptCache.set(file, { mtimeMs, title });
+	promptCache.set(key, { mtimeMs, title });
 	return title;
 }
 
@@ -160,10 +162,11 @@ export const listPersistedSessions: RecentSessionLister = () => {
 		.then(async infos => {
 			const cwdExists = new Map<string, Promise<boolean>>();
 			const exists = (cwd: string): Promise<boolean> => {
-				let result = cwdExists.get(cwd);
+				const key = sessionPathKey(cwd);
+				let result = cwdExists.get(key);
 				if (result === undefined) {
 					result = workingDirectoryExists(cwd);
-					cwdExists.set(cwd, result);
+					cwdExists.set(key, result);
 				}
 				return result;
 			};

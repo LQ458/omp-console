@@ -666,7 +666,7 @@ export const HeaderBar = memo(function HeaderBar({
 			{onOpenSettings && (
 				<div className="sh-phone-menu-row">
 					<span className="sh-phone-menu-label">Settings</span>
-					<button type="button" className="dk-tap" onClick={onOpenSettings} title="settings" aria-label="settings">
+					<button type="button" className="dk-tap" onClick={onOpenSettings} title="settings" aria-label="settings" data-tour="settings">
 						<Settings size={20} />
 					</button>
 				</div>
@@ -828,7 +828,7 @@ export const HeaderBar = memo(function HeaderBar({
 				{subCount > 0 && <span className="sh-badge">{subCount}</span>}
 			</button>
 			{onOpenSettings && (
-				<button type="button" className="dk-tap" onClick={onOpenSettings} title="settings" aria-label="settings">
+				<button type="button" className="dk-tap" onClick={onOpenSettings} title="settings" aria-label="settings" data-tour="settings">
 					<Settings size={15} />
 				</button>
 			)}

@@ -6,7 +6,7 @@
  *   WAIT:<ms>:<text> -> replies after a finite delay, for pause/queue boundary tests
  *   TASK:<text>  -> `task` tool call that spawns a subagent (its prompt contains SUBWORK, answered after a delay)
  *   VIBE:<text>   -> `vibe_spawn` starts a slow worker for registry/teardown probes
- *   SLEEP:<n>    -> `bash` tool call running `sleep <n>` (orphan-process probe); then "slept"
+ *   SLEEP:<n>    -> spawns a Bun child that remains alive for worker-shutdown probes
  *   SUBWORK...   -> the subagent's reply, after SUBAGENT_DELAY_MS
  *   NEST:<text>  -> `task` tool call spawning the `deck-nest` profile; that child (prompt contains SUBNEST) waits
  *                   NEST_DELAY_MS, then spawns a grandchild with `task` (SUBWORK)
@@ -236,10 +236,13 @@ async function respond(stream: AssistantMessageEventStream, context: Context, si
 			});
 			return;
 		}
-		const checkerCommand =
+		const checkerExecutable = "bun";
+		const checkerProcessMarker = "omp-console-cleanse-checker-process";
+		const checkerChildMarker = "omp-console-cleanse-checker-child";
+		const checkerScript =
 			process.env.STUB_CLEANSE_CHECKER_SLEEP === "true"
-				? "exec /bin/sleep 30"
-				: "test -f src/a.ts && echo 'src/a.ts:1: error: fixture diagnostic'";
+				? `const child = Bun.spawn([process.execPath, "-e", "setTimeout(()=>{}, 1e9)", "${checkerChildMarker}"], { stdin: "ignore", stdout: "ignore", stderr: "ignore", windowsHide: true }); await child.exited;`
+				: `process.stdout.write("src/a.ts:1: error: fixture diagnostic\\n");`;
 		replyToolCall(stream, {
 			type: "toolCall",
 			id: `call-cleanse-discovery-${Date.now()}`,
@@ -251,7 +254,7 @@ async function respond(stream: AssistantMessageEventStream, context: Context, si
 							label: "fixture diagnostics",
 							language: "Shell",
 							cwd: ".",
-							command: ["/bin/sh", "-c", checkerCommand],
+							command: [checkerExecutable, "-e", checkerScript, checkerProcessMarker],
 							parser: "generic",
 						},
 					],
@@ -385,12 +388,14 @@ async function respond(stream: AssistantMessageEventStream, context: Context, si
 	}
 	const sleepSeconds = /^SLEEP:(\d+)/.exec(prompt)?.[1];
 	if (sleepSeconds) {
+		const marker = `omp-console-worker-child-${sleepSeconds}`;
+		const executable = JSON.stringify(Bun.which("bun") ?? process.execPath);
+		const script = JSON.stringify(`setTimeout(()=>{}, ${Number(sleepSeconds)} * 1000)`);
 		replyToolCall(stream, {
 			type: "toolCall",
 			id: "call-sleep",
 			name: "bash",
-			// Absolute path: bare `sleep` is an in-process shell builtin and would spawn no child to orphan.
-			arguments: { command: `/bin/sleep ${sleepSeconds}` },
+			arguments: { command: `${executable} -e ${script} ${marker}` },
 		});
 		return;
 	}

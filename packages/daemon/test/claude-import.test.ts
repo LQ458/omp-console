@@ -8,7 +8,8 @@ import { listPersistedSessions } from "../src/recent";
 import { type TestDaemon, startTestDaemon, stopTestDaemons } from "./harness";
 import { makeTmp } from "./helpers";
 
-const ISOLATED_SOURCE_ENV = ["HOME", "CLAUDE_CONFIG_DIR", "OMP_CONSOLE_SESSIONS_DIR"] as const;
+// Windows resolves the home folder from USERPROFILE (os.homedir), other platforms from HOME.
+const ISOLATED_SOURCE_ENV = ["HOME", "USERPROFILE", "CLAUDE_CONFIG_DIR", "OMP_CONSOLE_SESSIONS_DIR"] as const;
 let previousSourceEnv = new Map<string, string | undefined>();
 
 afterEach(async () => {
@@ -23,6 +24,7 @@ afterEach(async () => {
 function useIsolatedSources(home: string, claudeDir: string): void {
 	previousSourceEnv = new Map(ISOLATED_SOURCE_ENV.map(key => [key, process.env[key]]));
 	process.env.HOME = home;
+	process.env.USERPROFILE = home;
 	process.env.CLAUDE_CONFIG_DIR = claudeDir;
 	delete process.env.OMP_CONSOLE_SESSIONS_DIR;
 }

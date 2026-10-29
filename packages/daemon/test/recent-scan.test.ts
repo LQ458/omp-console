@@ -14,7 +14,8 @@ afterEach(async () => {
 });
 
 describe("persisted session scan", () => {
-	it.skipIf(process.getuid?.() === 0)("reports an unreadable session store instead of returning no sessions", async () => {
+	// chmod permissions do not restrict access through Windows ACLs.
+	it.skipIf(process.platform === "win32" || process.getuid?.() === 0)("reports an unreadable session store instead of returning no sessions", async () => {
 		const store = makeTmp("omp-console-locked-store-");
 		process.env.OMP_CONSOLE_SESSIONS_DIR = store;
 		await fs.chmod(store, 0o000);
@@ -22,7 +23,8 @@ describe("persisted session scan", () => {
 		await expect(listPersistedSessions()).rejects.toBeInstanceOf(RecentSessionScanError);
 	});
 
-	it.skipIf(process.getuid?.() === 0)("reports an unreadable project folder inside the store", async () => {
+	// chmod permissions do not restrict access through Windows ACLs.
+	it.skipIf(process.platform === "win32" || process.getuid?.() === 0)("reports an unreadable project folder inside the store", async () => {
 		const store = makeTmp("omp-console-locked-bucket-");
 		const bucket = path.join(store, "--work-project--");
 		await fs.mkdir(bucket);

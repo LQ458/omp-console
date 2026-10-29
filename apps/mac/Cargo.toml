@@ -2,7 +2,7 @@
 
 [package]
 name = "omp-console-desktop"
-version = "0.1.0"
+version = "0.2.0"
 description = "Native desktop shell for the omp-console daemon"
 authors = ["omp-console"]
 edition = "2021"

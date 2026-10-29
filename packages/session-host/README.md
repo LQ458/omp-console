@@ -2,6 +2,8 @@
 
 Headless worker: one omp `AgentSession` hosted as a collab room, no TUI. One process per session.
 
+On Windows, PowerShell process snapshots and `taskkill /T /F` handle worker descendants; cancelled cleanse checkers and DAP adapters are matched and reaped with their child trees. Shutdown closes the worker-owned auth storage after disposing the session. Git diff and hunk comparisons normalize CRLF on Windows when `core.autocrlf=true`.
+
 ```
     bun packages/session-host/src/main.ts --cwd <dir> --relay <ws://host:port> --room <roomId> \
         [--resume <file>] [--fork <file>[:<entryId>]] [--model <selector>]
@@ -52,7 +54,7 @@ The state line carries live active/phase/error and the latest transcript preview
 | `src/agent-model.ts` | `setFocusedAgentModel` / `setFocusedAgentThinking` for the daemon's `set-agent-model` / `set-agent-thinking` commands; session-only changes |
 | `src/catalog.ts`, `src/run-command.ts`, `src/spawn-agent.ts`, `src/agent-events.ts`, `src/decode.ts` | request commands and lifecycle lines described above |
 | `src/session-ops.ts`, `src/plan-mode.ts`, `src/usage-report.ts`, `src/key-points.ts`, `src/title.ts`, `src/plugins.ts`, `src/ext-ui.ts`, `src/usage-samples.ts`, `src/quota-gate.ts` | wave-2 commands and status lines described above |
-| `src/process-tree.ts` | descendant sweep used at shutdown |
+| `src/process-tree.ts` | POSIX descendant sweep; Windows PowerShell snapshots, `taskkill /T /F`, and targeted checker/DAP tree cleanup |
 
 Tests (`bun test`, no network): real worker subprocesses against an in-process relay, driven by the web
 `GuestClient`, with a scripted provider (`test/fixtures/stub-provider.ts`) loaded as an extension from an

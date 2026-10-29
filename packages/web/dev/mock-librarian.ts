@@ -3,6 +3,7 @@ import type {
 	ApiError,
 	CardStatus,
 	CardsResponse,
+	NewSessionBrowseResponse,
 	NewSessionSuggestions,
 	PathSuggestions,
 	ReturnBrief,
@@ -13,15 +14,39 @@ import type {
 } from "@omp-console/protocol";
 import { OMP_CONSOLE_SESSION_URL_PREFIX } from "@omp-console/protocol";
 
-const KNOWLEDGE_ROOT = "/Users/alice/Knowledge";
-const PROJECTS_ROOT = "/Users/alice/Projects";
+const MOCK_HOME = "/Users/alice";
+const KNOWLEDGE_ROOT = `${MOCK_HOME}/Documents`;
+const CODE_ROOT = `${MOCK_HOME}/code`;
+const PROJECTS_ROOT = `${MOCK_HOME}/projects`;
+const PROJECT_APP = `${PROJECTS_ROOT}/app`;
+const PROJECT_API = `${PROJECTS_ROOT}/api`;
+const MOCK_RECENT_PROJECTS = [PROJECT_APP, PROJECT_API];
 const MOCK_DIRECTORIES = [
 	KNOWLEDGE_ROOT,
+	CODE_ROOT,
+	`${CODE_ROOT}/omp-console`,
 	PROJECTS_ROOT,
-	`${PROJECTS_ROOT}/console-example`,
-	`${PROJECTS_ROOT}/web-app`,
-	`${PROJECTS_ROOT}/docs`,
+	PROJECT_APP,
+	`${CODE_ROOT}/sample-agent`,
+	`${PROJECT_APP}/docs`,
+	`${PROJECT_APP}/src`,
+	PROJECT_API,
+	`${PROJECT_API}/src`,
 ];
+const MOCK_BROWSE_DIRECTORIES = new Map<string, readonly string[]>([
+	[MOCK_HOME, [CODE_ROOT, KNOWLEDGE_ROOT, PROJECTS_ROOT]],
+	[CODE_ROOT, [`${CODE_ROOT}/omp-console`, `${CODE_ROOT}/sample-agent`]],
+	[`${CODE_ROOT}/omp-console`, [`${CODE_ROOT}/omp-console/packages`]],
+	[`${CODE_ROOT}/omp-console/packages`, []],
+	[`${CODE_ROOT}/sample-agent`, []],
+	[KNOWLEDGE_ROOT, []],
+	[PROJECTS_ROOT, [PROJECT_API, PROJECT_APP]],
+	[PROJECT_APP, [`${PROJECT_APP}/docs`, `${PROJECT_APP}/src`]],
+	[`${PROJECT_APP}/docs`, []],
+	[`${PROJECT_APP}/src`, []],
+	[PROJECT_API, [`${PROJECT_API}/src`]],
+	[`${PROJECT_API}/src`, []],
+]);
 
 export interface LibrarianMockContext {
 	sessions(): { live: SessionSummary[]; recent: SessionSummary[] };
@@ -123,14 +148,15 @@ export function createLibrarianMock(context: LibrarianMockContext): LibrarianMoc
 				lastUsedAt: Math.max(previous?.lastUsedAt ?? 0, session.lastActivityAt),
 			});
 		}
-		const paths = new Set([...counts.keys(), KNOWLEDGE_ROOT, `${PROJECTS_ROOT}/omp`]);
+		const demoLastUsedAt = Date.now() - 2 * 24 * 60 * 60 * 1000;
+		const paths = new Set([...counts.keys(), ...MOCK_RECENT_PROJECTS]);
 		return {
 			recent: [...paths]
 				.map(cwd => ({
 					cwd,
 					name: basename(cwd),
-					sessions30d: counts.get(cwd)?.sessions30d ?? 0,
-					lastUsedAt: counts.get(cwd)?.lastUsedAt ?? 0,
+					sessions30d: counts.get(cwd)?.sessions30d ?? 1,
+					lastUsedAt: counts.get(cwd)?.lastUsedAt ?? demoLastUsedAt,
 				}))
 				.sort((a, b) => b.lastUsedAt - a.lastUsedAt || a.name.localeCompare(b.name)),
 			roots: [
@@ -153,6 +179,22 @@ export function createLibrarianMock(context: LibrarianMockContext): LibrarianMoc
 		const path = query.startsWith("/") ? query : `${root}/${query.replace(/^\/+/, "")}`;
 		if (directories.includes(path)) return { matches };
 		return { matches, create: { path, root } };
+	}
+
+	function browse(req: Request): Response {
+		const requested = new URL(req.url).searchParams.get("dir") ?? MOCK_HOME;
+		const directory = requested.replace(/\/+$/, "") || "/";
+		const children = MOCK_BROWSE_DIRECTORIES.get(directory);
+		if (children === undefined) return fail(404, "not-found", "Couldn't list this folder. Check the folder path and try again.");
+		const parent = directory === MOCK_HOME ? undefined : directory.slice(0, directory.lastIndexOf("/")) || "/";
+		const response: NewSessionBrowseResponse = {
+			dir: directory,
+			home: MOCK_HOME,
+			...(parent === undefined ? {} : { parent }),
+			entries: children.map(child => ({ name: basename(child), path: child })),
+			truncated: false,
+		};
+		return json(response);
 	}
 
 	function brief(req: Request): ReturnBrief {
@@ -233,6 +275,7 @@ export function createLibrarianMock(context: LibrarianMockContext): LibrarianMoc
 			if (route === "/new-session/suggestions" && req.method === "GET") return json(workspaceSuggestions());
 			if (route === "/new-session/paths" && req.method === "GET") return json(pathSuggestions(req));
 			if (route === "/agenda/today" && req.method === "GET") return json(agenda());
+			if (route === "/new-session/browse" && req.method === "GET") return browse(req);
 			return undefined;
 		},
 	};

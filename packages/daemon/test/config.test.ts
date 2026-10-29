@@ -35,10 +35,10 @@ describe("daemon config file", () => {
 		expect(parsed).toEqual({
 			features: { librarian: true, agenda: true, quickAsk: true, peers: true, openrouterDecisions: true, computerUse: true, overnight: true },
 			quickAsk: { sources: ["repo", "siyuan"] },
-			knowledgeRoot: path.join(stateDir, "Knowledge"),
-			projectRoots: [path.join(stateDir, "Projects")],
-			scheduleFile: path.join(stateDir, "schedule.toml"),
-			agendaHub: path.join(stateDir, "tasks-hub"),
+			knowledgeRoot: path.resolve(stateDir, "Knowledge"),
+			projectRoots: [path.resolve(stateDir, "Projects")],
+			scheduleFile: path.resolve(stateDir, "schedule.toml"),
+			agendaHub: path.resolve(stateDir, "tasks-hub"),
 			peers: [{ id: "remote", name: "REMOTE", url: "https://example.com:8443" }],
 		});
 	});

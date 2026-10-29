@@ -38,8 +38,15 @@ afterEach(async () => {
 	await worker?.stop("test over");
 	worker = undefined;
 	relay.stop();
-	fs.rmSync(root, { recursive: true, force: true });
-	fs.rmSync(path.join(os.homedir(), process.env.PI_CONFIG_DIR ?? ".omp-console-test-none"), { recursive: true, force: true });
+	// This test runs the worker in-process, and on Windows a file in the agent folder stays open after stop() until the
+	// process exits (a real worker is its own process). Windows cannot delete an open file, so these folders may stay.
+	for (const folder of [root, path.join(os.homedir(), process.env.PI_CONFIG_DIR ?? ".omp-console-test-none")]) {
+		try {
+			fs.rmSync(folder, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
+		} catch (error) {
+			if (process.platform !== "win32" || (error as NodeJS.ErrnoException).code !== "EBUSY") throw error;
+		}
+	}
 	if (savedConfigDir === undefined) delete process.env.PI_CONFIG_DIR;
 	else process.env.PI_CONFIG_DIR = savedConfigDir;
 	if (savedAgentDir === undefined) delete process.env.PI_CODING_AGENT_DIR;

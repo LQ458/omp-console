@@ -18,6 +18,7 @@ import type {
 import { formatCollabLink } from "@oh-my-pi/pi-coding-agent/collab/protocol";
 import { GuestClient, type GuestSnapshot } from "./collab-web/client";
 import { type LocalRelay, startLocalRelay } from "./collab-web/local-relay";
+import { killProcessTreeNow, readProcessEntries } from "../src/process-tree-platform";
 
 export type WorkerLine = WorkerStatus | WorkerPong | WorkerModelResult | WorkerAbortResult | WorkerRequestResult;
 
@@ -136,6 +137,7 @@ export class WorkerProcess {
 				stdout: "pipe",
 				stderr: "pipe",
 				env,
+				windowsHide: true,
 			},
 		);
 		this.proc.stdin.write(
@@ -200,7 +202,7 @@ export class WorkerProcess {
 
 	async kill(): Promise<void> {
 		if (this.proc.exitCode === null) {
-			this.proc.kill("SIGKILL");
+			killProcessTreeNow(this.proc.pid);
 			await this.proc.exited;
 		}
 	}
@@ -212,10 +214,7 @@ export function snapshotText(snapshot: GuestSnapshot): string {
 
 /** Pids of every process whose command line contains `needle`. */
 export function pidsMatching(needle: string): number[] {
-	const out = Bun.spawnSync(["ps", "-A", "-o", "pid=,command="]).stdout.toString();
-	return out
-		.split("\n")
-		.filter(line => line.includes(needle) && !line.includes("ps -A"))
-		.map(line => Number(line.trim().split(/\s+/)[0]))
-		.filter(pid => Number.isInteger(pid) && pid !== process.pid);
+	return readProcessEntries()
+		.filter(entry => entry.commandLine.includes(needle) && entry.pid !== process.pid)
+		.map(entry => entry.pid);
 }

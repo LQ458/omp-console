@@ -1,3 +1,5 @@
+English | [中文](README.zh-CN.md)
+
 # omp-console
 
 A self-hosted control room for your omp coding agents: tiled panes and a live agent graph on your Mac, and the same sessions on your phone.
@@ -15,15 +17,16 @@ Captured from the local mock daemon with WebKit fixtures; no live agent or model
 
 ## Quick start
 
-- **Step-by-step guide** for macOS, Linux, and Windows (WSL 2): [docs/INSTALL.md](docs/INSTALL.md).
-- **Let a coding agent install it**: paste the prompt in [docs/INSTALL-WITH-AN-AGENT.md](docs/INSTALL-WITH-AN-AGENT.md) into omp, Claude Code, or Codex.
-- **Desktop apps** (macOS, Windows, Linux) are on the [Releases page](https://github.com/LQ458/omp-console/releases). They are windows onto the local service, so install the service first.
+- **Install** on macOS, Linux, or native Windows 10/11: [step-by-step installation](docs/INSTALL.md).
+- **Get started** after installation: [connect your browser, start a session, import Claude Code history, and connect your phone](docs/GETTING-STARTED.md).
+- **Install with a coding agent**: use the prompt for omp, Claude Code, or Codex in [Install with a coding agent](docs/INSTALL-WITH-AN-AGENT.md).
+- **Desktop apps** for macOS, Windows, and Linux: [download from Releases](https://github.com/LQ458/omp-console/releases). Install the service first.
 
 The sections below are the short reference.
 
 ## Requirements
 
-- macOS or Linux for the daemon host; on Windows, the daemon runs inside WSL 2 (see the [guide](docs/INSTALL.md#windows-set-up-wsl-first)). Native Tauri desktop apps exist for macOS, Windows, and Linux (`.deb` or AppImage), or use any browser/PWA.
+- macOS or Linux, or Windows 10/11 x64 natively (no WSL required). Native Tauri desktop apps exist for macOS, Windows, and Linux (`.deb` or AppImage); the daemon also works from any browser/PWA.
 - Bun 1.4 or newer (`bun upgrade` if older: older releases cannot read the lockfile and build a blank web UI). The installer checks the version and uses that Bun for the build and the service; CI tests Bun 1.4.3.
 - `omp` installed; the first-run checklist checks the executable, version, available model credentials, existing omp sessions, and Claude Code history. The installer does not inspect credentials or make model calls.
 - Tailscale is optional for phone access; the supported remote path is Tailscale Serve.
@@ -70,10 +73,30 @@ To run without a service, run `./scripts/install.sh --plain` to build and instal
 
 Tailscale Serve is the only supported remote-access path. Do not use Tailscale Funnel. A reverse proxy needs its own authentication and is not a supported deployment.
 
+## Install on Windows
+
+On Windows 10/11 x64, install [Git for Windows](https://git-scm.com/download/win), then open PowerShell and install Bun and omp:
+
+```powershell
+powershell -c "irm bun.sh/install.ps1 | iex"
+irm https://omp.sh/install.ps1 | iex
+```
+
+After reopening PowerShell, clone and install:
+
+```powershell
+git clone https://github.com/LQ458/omp-console.git "$HOME\omp-console"
+Set-Location "$HOME\omp-console"
+.\scripts\install.ps1
+```
+
+The installer builds the web UI and starts the per-user `omp-console` Scheduled Task; no WSL or administrator rights are needed. In an interactive PowerShell window it opens the pairing page. For the full guide, SmartScreen notes, update, and uninstall steps, see [docs/INSTALL.md](docs/INSTALL.md).
+
 ## Features
 
 - Tiled session panes and a live nested-agent graph.
 - Session creation, steering, status, and collaboration controls backed by omp.
+- The new-session dialog shows recent projects and lets you browse from your home folder, type a path, or create a folder inside a configured project folder.
 - Recent project folders come from saved omp sessions; terminal sessions appear in the sidebar and open as copies, and sessions in deleted folders remain available as read-only transcripts.
 - Optional Overnight run keeps a session working until its deadline, retries recoverable failures, and produces a morning report; best-effort only, with platform-specific keep-awake support.
 - Shared sessions on the host and phone, with a responsive PWA and optional Android WebView shell.

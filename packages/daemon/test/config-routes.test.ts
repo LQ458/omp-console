@@ -143,7 +143,7 @@ describe("daemon configuration routes", () => {
 		const written = await daemon.put("/api/config", saved);
 		expect(written.status).toBe(200);
 		expect(await written.json()).toEqual({ restartRequired: true });
-		expect(fs.statSync(configFile).mode & 0o777).toBe(0o600);
+		if (process.platform !== "win32") expect(fs.statSync(configFile).mode & 0o777).toBe(0o600);
 		expect(await loadDaemonConfigFile(stateDir)).toEqual(saved);
 
 		await daemon.daemon.stop();
@@ -183,16 +183,20 @@ describe("daemon configuration routes", () => {
 		fs.writeFileSync(notToken, "hello", { mode: 0o600 });
 		const peer = (tokenFile: string | undefined, id = "studio") => ({ id, name: "Studio", url: "https://peer.example", ...(tokenFile ? { tokenFile } : {}) });
 
-		for (const body of [
+		const invalidBodies: unknown[] = [
 			{ peers: [peer(goodToken, "local")] },
 			{ peers: [peer(goodToken), peer(goodToken)] },
 			{ features: { peers: true }, peers: [peer(path.join(stateDir, "missing"))] },
-			{ features: { peers: true }, peers: [peer(looseToken)] },
 			{ features: { peers: true }, peers: [peer(notToken)] },
-		]) {
+		];
+		if (process.platform !== "win32") invalidBodies.push({ features: { peers: true }, peers: [peer(looseToken)] });
+		for (const body of invalidBodies) {
 			const response = await daemon.put("/api/config", body);
 			expect(response.status).toBe(400);
 			expect(fs.readFileSync(configFile, "utf8")).toBe(before);
+		}
+		if (process.platform === "win32") {
+			expect((await daemon.put("/api/config", { features: { peers: true }, peers: [peer(looseToken)] })).status).toBe(200);
 		}
 		// Peers off: token files are not read at start, so an unusable one does not block saving.
 		expect((await daemon.put("/api/config", { features: { peers: false }, peers: [peer(notToken)] })).status).toBe(200);

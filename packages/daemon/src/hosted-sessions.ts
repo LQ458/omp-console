@@ -2,18 +2,18 @@ import { realpathSync } from "node:fs";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { atomicWriteFile } from "./workspaces/files";
+import { sessionPathKey } from "./session-key";
 
 /**
- * One spelling per session file: the folder's real path plus the file name. Workers report paths built from the agent
- * dir as given (`/var/...`), requests arrive symlink-resolved (`/private/var/...`); a new file may not exist yet, so only
- * its folder is resolved.
+ * Canonical comparison key for a session file. POSIX retains the historical real-parent-plus-name spelling; Windows
+ * resolves the complete native path to collapse junctions and 8.3 aliases.
  */
 export function canonicalSessionFile(file: string): string {
 	const directory = path.dirname(file);
 	try {
-		return path.join(realpathSync(directory), path.basename(file));
+		return sessionPathKey(path.join(realpathSync(directory), path.basename(file)));
 	} catch {
-		return path.resolve(file);
+		return sessionPathKey(path.resolve(file));
 	}
 }
 

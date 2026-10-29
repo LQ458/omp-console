@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { isWindows, privateFileProblem } from "./platform";
 import type { PairingCodeInfo } from "./device-auth";
 import { atomicWriteFile } from "./workspaces/files";
 
@@ -24,10 +25,10 @@ async function ensurePrivateDirectory(directory: string): Promise<void> {
 	await fs.mkdir(directory, { recursive: true, mode: 0o700 });
 	const stat = await fs.lstat(directory);
 	if (!stat.isDirectory() || stat.isSymbolicLink()) throw new Error("pairing control path must be a real directory");
-	await fs.chmod(directory, 0o700);
+	if (!isWindows) await fs.chmod(directory, 0o700);
 }
 
-/** The CLI writes a one-shot 0600 file; the daemon watches only its own state directory. */
+/** The CLI writes a one-shot request file in the private state directory; Windows privacy comes from its ACL. */
 export async function requestPairingCode(stateDir: string): Promise<PairingCodeInfo> {
 	const directory = path.join(stateDir, "pair-requests");
 	await ensurePrivateDirectory(directory);
@@ -39,6 +40,9 @@ export async function requestPairingCode(stateDir: string): Promise<PairingCodeI
 	try {
 		while (Date.now() < expiresAt) {
 			try {
+				const responseStat = await fs.lstat(responsePath);
+				const responseProblem = privateFileProblem(responseStat);
+				if (responseProblem !== undefined) throw new Error(`pairing response ${responseProblem}`);
 				const parsed: unknown = JSON.parse(await fs.readFile(responsePath, "utf8"));
 				if (typeof parsed === "object" && parsed !== null && !Array.isArray(parsed)) {
 					const record = parsed as Record<string, unknown>;
@@ -104,12 +108,7 @@ export class PairingRequestWatcher {
 			let request: PairingRequest;
 			try {
 				const stat = await fs.lstat(requestPath);
-				if (
-					!stat.isFile() ||
-					stat.isSymbolicLink() ||
-					(stat.mode & 0o777) !== 0o600 ||
-					Date.now() - stat.mtimeMs > REQUEST_TIMEOUT_MS
-				) {
+				if (privateFileProblem(stat) !== undefined || Date.now() - stat.mtimeMs > REQUEST_TIMEOUT_MS) {
 					await fs.rm(requestPath, { force: true });
 					continue;
 				}

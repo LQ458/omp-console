@@ -1724,7 +1724,7 @@ export const Composer = memo(function Composer({
 	// question) the composer keeps its own Stop button.
 	const touchActionRow = touchLayout && canPrompt && active && sessionId !== undefined && uiRequest === null;
 	return (
-		<div ref={composerRef} className="sh-composer cmp-composer" data-send-feedback={sendFeedback.state}>
+		<div ref={composerRef} className="sh-composer cmp-composer" data-send-feedback={sendFeedback.state} data-tour="main-pane">
 			{assist.open && assist.trigger && (
 				<ComposerSuggest
 					listId={listId}

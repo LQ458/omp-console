@@ -1,5 +1,5 @@
 /**
- * Web Push subscription store. Persists subscriptions as JSON under the state dir (mode 0600); `push-sender.ts`
+ * Web Push subscription store. Persists subscriptions as JSON under the state dir (mode 0600 on POSIX; Windows uses the state directory ACL); `push-sender.ts`
  * reads it to deliver notifications and removes subscriptions the push service reports gone.
  */
 import type { PushSubscriptionRequest } from "@omp-console/protocol";

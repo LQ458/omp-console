@@ -1,4 +1,5 @@
 /** Small pure formatting helpers shared across collab-web components. */
+import { abbreviateHome, isWindowsPath } from "./native-path";
 
 /** HTML-escape text destined for `dangerouslySetInnerHTML`. */
 export function escapeHtml(s: string): string {
@@ -60,12 +61,17 @@ export function fmtPercent(p: number | null | undefined): string {
 	return `${Math.round(Math.min(100, Math.max(0, p)))}%`;
 }
 
-/** Home-relative, middle-elided path: "~/…/packages/collab-web". */
 export function shortenPath(p: string): string {
 	if (typeof p !== "string" || p.length === 0) return "";
-	let out = p.replace(/^\/(?:Users|home)\/[^/]+(?=\/|$)/, "~");
-	const segs = out.split("/");
-	if (segs.length > 4) out = `${segs[0]}/…/${segs.slice(-2).join("/")}`;
+	let out = abbreviateHome(p);
+	const windows = isWindowsPath(p);
+	const separator = windows && out.includes("\\") ? "\\" : "/";
+	const segments = out.split(windows ? /[\\/]/ : "/");
+	if (windows && isWindowsPath(out)) {
+		if (segments.length > 6) out = `${segments.slice(0, 4).join(separator)}${separator}…${separator}${segments.slice(-2).join(separator)}`;
+	} else if (segments.length > 4) {
+		out = `${segments[0]}${separator}…${separator}${segments.slice(-2).join(separator)}`;
+	}
 	return out;
 }
 

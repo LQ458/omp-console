@@ -5,6 +5,7 @@
  * Quoting follows omp's own parser (`packages/coding-agent/src/utils/file-mentions.ts`): `@"a b"`, `@'a b'`, or bare
  * `@path` when the path has no whitespace or `@`.
  */
+import { basename, fileUrlToPath, isAbsolutePath, isWindowsPath, pathKey } from "./native-path";
 
 export type MentionKind = "file" | "model" | "command";
 
@@ -133,9 +134,9 @@ export function insertAtSelection(text: string, from: number, to: number, insert
 
 export const PROMPT_IMAGE_TYPES: ReadonlySet<string> = new Set(["image/png", "image/jpeg", "image/gif", "image/webp"]);
 
-function dotSegments(path: string): string[] {
+function dotSegments(path: string, windows: boolean): string[] {
 	const out: string[] = [];
-	for (const part of path.split("/")) {
+	for (const part of path.split(windows ? /[\\/]/ : "/")) {
 		if (part === "" || part === ".") continue;
 		if (part === "..") out.pop();
 		else out.push(part);
@@ -145,14 +146,19 @@ function dotSegments(path: string): string[] {
 
 /** Path of `absolute` relative to `cwd`, or null when it lies outside. The cwd itself maps to `.`. */
 export function relativeToCwd(absolute: string, cwd: string): string | null {
-	if (!absolute.startsWith("/") || !cwd.startsWith("/")) return null;
-	const target = dotSegments(absolute);
-	const root = dotSegments(cwd);
+	if (!isAbsolutePath(absolute) || !isAbsolutePath(cwd)) return null;
+	const absoluteWindows = isWindowsPath(absolute);
+	const cwdWindows = isWindowsPath(cwd);
+	if (absoluteWindows !== cwdWindows) return null;
+	const target = dotSegments(absolute, absoluteWindows);
+	const root = dotSegments(cwd, cwdWindows);
+	const targetKeys = dotSegments(pathKey(absolute), absoluteWindows);
+	const rootKeys = dotSegments(pathKey(cwd), cwdWindows);
 	if (target.length < root.length) return null;
-	for (let i = 0; i < root.length; i++) if (target[i] !== root[i]) return null;
+	for (let i = 0; i < root.length; i++) if (targetKeys[i] !== rootKeys[i]) return null;
 	const rest = target.slice(root.length);
 	if (rest.length === 0) return ".";
-	return rest.join("/") + (absolute.endsWith("/") ? "/" : "");
+	return rest.join("/") + (absolute.endsWith("/") || absolute.endsWith("\\") ? "/" : "");
 }
 
 /** `@relative/path` inside the session cwd; `@"/absolute/path"` (always quoted) outside it. */
@@ -169,13 +175,8 @@ export function parseFileUris(text: string): string[] {
 	for (const raw of text.split(/\r?\n/)) {
 		const line = raw.trim();
 		if (!line.startsWith("file://")) continue;
-		try {
-			const url = new URL(line);
-			if (url.hostname !== "" && url.hostname !== "localhost") continue;
-			paths.push(decodeURIComponent(url.pathname));
-		} catch {
-			// malformed URI: skip
-		}
+		const path = fileUrlToPath(line);
+		if (path !== null) paths.push(path);
 	}
 	return paths;
 }
@@ -204,23 +205,20 @@ export interface DropPlan {
 	unmatchedPaths: string[];
 }
 
-function baseName(path: string): string {
-	const parts = path.split("/").filter(part => part !== "");
-	return parts[parts.length - 1] ?? "";
-}
 
 /** Splits one drop into mention paths, prompt images, and files whose path the browser hid. */
 export function planDrop(input: DropInput): DropPlan {
 	const seen = new Set<string>();
 	const paths: string[] = [];
 	for (const path of [...parseFileUris(input.uriList), ...parseFileUris(input.text)]) {
-		if (seen.has(path)) continue;
-		seen.add(path);
+		const key = pathKey(path);
+		if (seen.has(key)) continue;
+		seen.add(key);
 		paths.push(path);
 	}
 	const claimed = new Set<string>();
 	const claim = (name: string): string | undefined => {
-		const hit = paths.find(path => !claimed.has(path) && baseName(path) === name);
+		const hit = paths.find(path => !claimed.has(path) && (isWindowsPath(path) ? basename(path).toLowerCase() === name.toLowerCase() : basename(path) === name));
 		if (hit !== undefined) claimed.add(hit);
 		return hit;
 	};

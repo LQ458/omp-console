@@ -42,6 +42,11 @@ describe("workspaceOf", () => {
 		expect(workspaceOf(list, "/docs/Job/")?.id).toBe("knowledge");
 		expect(workspaceOf(list, "/elsewhere")).toBeUndefined();
 	});
+	it("matches Windows paths across separator styles and without case sensitivity", () => {
+		const windows = [ws("project:win", "project", "C:\\Users\\Leo\\repo")];
+		expect(workspaceOf(windows, "c:/users/leo/REPO/src")).toBe(windows[0]);
+		expect(workspaceOf(windows, "C:\\Users\\Leo\\repository")).toBeUndefined();
+	});
 });
 
 describe("groupWorkspaces", () => {

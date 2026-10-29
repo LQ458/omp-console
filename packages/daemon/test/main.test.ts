@@ -335,7 +335,7 @@ describe("daemon process", () => {
 		const status = async (host: string): Promise<number> =>
 			(await fetch(`${base}/api/health`, { headers: { Host: host, Cookie: cookie } })).status;
 		expect(await Promise.all(["a.ts.net", "b.ts.net", "c.ts.net", "evil.example"].map(status))).toEqual([200, 200, 421, 421]);
-		expect(fs.statSync(path.join(stateDir, "vapid-keys.json")).mode & 0o777).toBe(0o600);
+		if (process.platform !== "win32") expect(fs.statSync(path.join(stateDir, "vapid-keys.json")).mode & 0o777).toBe(0o600);
 		proc.kill("SIGTERM");
 		expect(await proc.exited).toBe(143);
 	}, 30_000);

@@ -5,8 +5,14 @@ import type { DebugDiagnosticsOp, DebugSessionOp, SessionOpV3Result, WorkerReque
 import type { AgentSession } from "@oh-my-pi/pi-coding-agent/session/agent-session";
 import { dapSessionManager } from "@oh-my-pi/pi-coding-agent/dap/session";
 import { DebugModeService } from "../src/debug-mode";
-import { Fixture, newRoom, pidsMatching, waitUntil, type WorkerProcess } from "./harness";
-
+import { childPidsMatching } from "./host-test-helpers";
+import {
+	Fixture,
+	newRoom,
+	pidsMatching,
+	waitUntil,
+	type WorkerProcess,
+} from "./harness";
 
 let fixture: Fixture | undefined;
 let workerForCleanup: WorkerProcess | undefined;
@@ -189,14 +195,17 @@ describe("debug mode", () => {
 			id: requestId,
 			op: { op: "debug", action: "launch", program: "sample.js", adapter: "deck-fixture", confirmed: true },
 		});
-		await waitUntil("held DAP adapter process", () => pidsMatching(adapterScript).length > 0);
+		await waitUntil("held DAP adapter process", () => childPidsMatching(worker.pid, adapterScript).length > 0);
+		const adapterChildMarker = "omp-console-dap-fixture-child";
+		await waitUntil("held DAP adapter child process", () => childPidsMatching(worker.pid, adapterChildMarker).length > 0);
 		worker.send({ t: "cancel-session-op", id: requestId });
 		const reply = await waitUntil(
 			"debug launch cancellation reply",
 			() => worker.lines.find(line => "id" in line && line.id === requestId),
 		);
 		expect(reply).toMatchObject({ t: "request-error", id: requestId });
-		await waitUntil("DAP adapter process exit", () => pidsMatching(adapterScript).length === 0);
+		await waitUntil("DAP adapter process exit", () => childPidsMatching(worker.pid, adapterScript).length === 0);
+		await waitUntil("DAP adapter child process exit", () => childPidsMatching(worker.pid, adapterChildMarker).length === 0);
 
 		worker.send({ t: "stop" });
 		await worker.exited;

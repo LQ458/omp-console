@@ -1,8 +1,7 @@
 name: CI
 
-# One Linux runner, about 10 minutes. The macOS job was dropped: its hosted runners are slow for the real-worker
-# timing tests and cost 10x minutes on private repositories. Run the full suites on a Mac before a release
-# (see CONTRIBUTING.md).
+# Linux and Windows CI run the web, daemon, and session-host suites. The macOS job was dropped: its hosted runners
+# are slow for the real-worker timing tests and cost 10x minutes on private repositories. Run the full suites on a Mac before a release (see CONTRIBUTING.md).
 
 on:
   push:
@@ -51,7 +50,74 @@ jobs:
       - name: Session-host tests
         run: cd packages/session-host && bun test --max-concurrency=1
 
+
       - name: Gitleaks
         uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  windows:
+    name: Windows checks
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.3
+
+      - name: Isolate omp state
+        shell: pwsh
+        run: |
+          $id = [guid]::NewGuid().ToString('N')
+          $env:PI_CODING_AGENT_DIR = Join-Path $env:RUNNER_TEMP ('pi-coding-agent-' + $id)
+          $env:PI_CONFIG_DIR = Join-Path $env:GITHUB_WORKSPACE ('.omp-console-test-' + $id)
+          New-Item -ItemType Directory -Force $env:PI_CODING_AGENT_DIR, $env:PI_CONFIG_DIR | Out-Null
+          "PI_CODING_AGENT_DIR=$env:PI_CODING_AGENT_DIR" >> $env:GITHUB_ENV
+          "PI_CONFIG_DIR=$env:PI_CONFIG_DIR" >> $env:GITHUB_ENV
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Typecheck
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          bun x tsgo --noEmit --strict --target ES2022 --module ESNext --moduleResolution bundler packages/protocol/src/index.ts
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          bun x tsgo -p packages/web/tsconfig.json --noEmit
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          bun x tsgo -p packages/web/pwa/tsconfig.json --noEmit
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          # Preserve the daemon's src/test diagnostic filter without its unsupported POSIX ! operator.
+          Push-Location packages/daemon
+          try {
+            $diagnostics = @(& bun x tsgo -p tsconfig.json --noEmit 2>&1 | ForEach-Object { $_.ToString() })
+          } finally {
+            Pop-Location
+          }
+          $daemonTypecheckExit = $LASTEXITCODE
+          $sourceErrors = @($diagnostics | Where-Object { $_ -match '^(src|test)[\\/]' })
+          if ($sourceErrors.Count -gt 0) { $sourceErrors; exit 1 }
+          if ($daemonTypecheckExit -ne 0 -and $diagnostics.Count -eq 0) { throw 'Daemon typecheck failed without diagnostics.' }
+          bun x tsgo -p packages/session-host/tsconfig.json --noEmit
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Web tests
+        working-directory: packages/web
+        run: bun test
+
+      # Same concurrency as the Linux job: these suites start real workers with timing checks. Each suite runs even
+      # when an earlier one failed, so one run reports every Windows failure.
+      - name: Daemon tests
+        if: success() || failure()
+        working-directory: packages/daemon
+        run: bun test --max-concurrency=2
+
+      - name: Session-host tests
+        if: success() || failure()
+        working-directory: packages/session-host
+        run: bun test --max-concurrency=1

@@ -3,6 +3,7 @@
  * `globalThis` feature probes, no host package imports.
  */
 import type { ToolResultImage, ToolResultLike } from "./types";
+import { abbreviateHome } from "../lib/native-path";
 
 export function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -29,16 +30,9 @@ export function display(value: unknown): string {
 	}
 }
 
-/** Replace `/Users/<x>` / `/home/<x>` prefix with `~` for display. */
+/** Replace a conventional user-home prefix with `~` for display. */
 export function shortenPath(p: string): string {
-	for (const prefix of ["/Users/", "/home/"]) {
-		if (p.startsWith(prefix)) {
-			const rest = p.slice(prefix.length);
-			const slash = rest.indexOf("/");
-			return slash < 0 ? "~" : `~${rest.slice(slash)}`;
-		}
-	}
-	return p;
+	return abbreviateHome(p);
 }
 
 /**

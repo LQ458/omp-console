@@ -2,7 +2,9 @@
 
 ## Setup
 
-The daemon host is macOS. Install Bun 1.4.3 and `omp`; sign in to `omp` before starting real sessions. In a checkout:
+Use a macOS, Linux, or Windows 10/11 x64 host. Install Bun 1.4.3 and `omp`; sign in to `omp` before starting real sessions. The setup commands below are for macOS/Linux; Windows instructions follow.
+
+**macOS/Linux:**
 
 ```sh
 bun install --frozen-lockfile
@@ -10,6 +12,8 @@ bun install --frozen-lockfile
 ```
 
 The installer requires Bun 1.4 or newer, puts that Bun first on `PATH` for package scripts, and builds `packages/web/dist`; `bun run build` itself refuses an older Bun (`packages/web/scripts/check-bun.ts`). It does not load LaunchAgents unless `--launchd` is supplied. For Android dependencies, run `npm ci` in `apps/android` and use its checked-in Gradle wrapper. Do not commit generated build output or dependency directories.
+
+On Windows, use PowerShell and Git for Windows, then run `.\scripts\install.ps1`; it installs and starts the per-user Scheduled Task. No WSL is required. CI typechecks and tests the Windows daemon, session-host, and web packages on `windows-latest`.
 
 The repository started under the internal codename **deck**. Public product and package names are omp-console; use those names in new user-facing text.
 
@@ -21,7 +25,7 @@ cd packages/daemon && bun test --max-concurrency=4 && bun run check:types
 cd packages/session-host && bun test --max-concurrency=4 && bun run check:types
 ```
 
-CI runs these checks on one Linux runner (plus the personal-data scan and gitleaks). It does not run macOS: before a release, run them on a Mac too, and `cd apps/mac && cargo test` for the macOS shell. Android's JavaScript tests are `cd apps/android && npm test`; Gradle tests require the Android SDK and JDK 21.
+CI runs these checks on Linux and Windows, including Windows-native typechecking and all three test suites. See the Windows job in `.github/workflows/ci.yml` for its PowerShell commands. CI does not run macOS: before a release, run them on a Mac too, and `cd apps/mac && cargo test` for the macOS shell. Android's JavaScript tests are `cd apps/android && npm test`; Gradle tests require the Android SDK and JDK 21.
 
 ## Sync published omp packages
 

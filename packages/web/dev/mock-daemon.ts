@@ -52,6 +52,7 @@ import type {
 	SetAgentModelResponse,
 	SetModelRoleRequest,
 	SetProfileModelRequest,
+	SetupResponse,
 	SleepSettingsRequest,
 	SleepSettingsResponse,
 	WorkerHealth,
@@ -728,6 +729,27 @@ export async function startMockDaemon(options: MockDaemonOptions = {}): Promise<
 			});
 		}
 		if (!paired) return fail(401, "unauthorized", "device pairing required");
+		if (route === "/setup" && method === "GET") {
+			const agentDir = "/Users/alice/.omp/agent";
+			const response: SetupResponse = {
+				omp: { found: true, path: "/Users/alice/.bun/bin/omp", version: "18.13.2", error: null },
+				models: { availableCount: 2, defaultModel: "anthropic/claude-sonnet-4-5", error: null },
+				sessions: { agentDir, count: recent.length + live.size, error: null },
+				ompSetup: {
+					agentDir,
+					defaultAgentDir: agentDir,
+					usesDefaultAgentDir: true,
+					defaultModel: "anthropic/claude-sonnet-4-5",
+					modelRoles: 2,
+					skills: 1,
+					extensions: 1,
+					mcpServers: 0,
+					error: null,
+				},
+				envKeys: ["ANTHROPIC_API_KEY"],
+			};
+			return json(response);
+		}
 		const overnightRoute = route === "/overnight/template" ||
 			route === "/overnight/preflight" ||
 			/^\/sessions\/[^/]+\/overnight$/.test(route);
@@ -1000,13 +1022,19 @@ export async function startMockDaemon(options: MockDaemonOptions = {}): Promise<
 				return new Response(null, { status: 204 });
 			}
 		}
+		const newSessionRoute =
+			route === "/new-session/suggestions" ||
+			route === "/new-session/paths" ||
+			route === "/new-session/browse";
+		if (newSessionRoute) {
+			const response = await librarianMock.handle(req, route);
+			if (response) return response;
+		}
 		const librarianRoute =
 			route === "/cards" ||
 			route === "/cards/refresh" ||
 			route.startsWith("/cards/") ||
-			route === "/brief" ||
-			route === "/new-session/suggestions" ||
-			route === "/new-session/paths";
+			route === "/brief";
 		const agendaRoute = route.startsWith("/agenda/");
 		if ((capabilities.features.librarian && librarianRoute) || (capabilities.features.agenda && agendaRoute)) {
 			const librarianResponse = await librarianMock.handle(req, route);

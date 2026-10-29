@@ -1,6 +1,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { atomicWriteFile } from "./workspaces/files";
+import { sessionPathKey } from "./session-key";
 
 export interface ArchiveRecord {
 	archivedAt: number;
@@ -130,8 +131,9 @@ export class ArchiveStore {
 	}
 
 	findBySessionFile(sessionFile: string): { id: string; record: ArchiveRecord } | undefined {
+		const key = sessionPathKey(sessionFile);
 		for (const [id, record] of this.#records) {
-			if (record.sessionFile === sessionFile) return { id, record: copyRecord(record) };
+			if (record.sessionFile !== undefined && sessionPathKey(record.sessionFile) === key) return { id, record: copyRecord(record) };
 		}
 		return undefined;
 	}

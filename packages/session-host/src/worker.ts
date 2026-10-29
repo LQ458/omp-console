@@ -82,6 +82,7 @@ export interface WorkerHooks {
 
 /** What `start` builds before the worker object exists and hands to it. */
 interface WorkerServices {
+	authStorage: AgentSession["modelRegistry"]["authStorage"];
 	mcpManager: MCPManager | undefined;
 	/** `subagentEventBus ?? eventBus` of the session. */
 	lifecycleBus: EventBus;
@@ -109,6 +110,7 @@ export class SessionHostWorker {
 	readonly #sink: StatusSink;
 	readonly #hooks: WorkerHooks;
 	readonly #session: AgentSession;
+	readonly #authStorage: AgentSession["modelRegistry"]["authStorage"];
 	readonly #controller: CollabController;
 	readonly #reporter: StateReporter;
 	readonly #catalog: CatalogProvider;
@@ -140,11 +142,12 @@ export class SessionHostWorker {
 		reporter: StateReporter,
 		services: WorkerServices,
 	) {
-		const { mcpManager, lifecycleBus, ui, extUi, gate, goals } = services;
+		const { authStorage, mcpManager, lifecycleBus, ui, extUi, gate, goals } = services;
 		this.#launch = launch;
 		this.#sink = sink;
 		this.#hooks = hooks;
 		this.#session = session;
+		this.#authStorage = authStorage;
 		this.#controller = controller;
 		this.#reporter = reporter;
 		this.#gate = gate;
@@ -472,6 +475,7 @@ export class SessionHostWorker {
 			});
 			const worker = new SessionHostWorker(launch, sink, hooks, session, controller, reporter, {
 				mcpManager: created.mcpManager,
+				authStorage,
 				lifecycleBus: created.subagentEventBus ?? created.eventBus,
 				ui,
 				extUi,
@@ -492,6 +496,7 @@ export class SessionHostWorker {
 			extUi.dispose();
 			gate.close();
 			await bounded("dispose after failed start", () => session.dispose());
+			await bounded("auth storage close after failed start", async () => authStorage.close());
 			await killDescendants(process.pid);
 			throw error;
 		}
@@ -611,6 +616,7 @@ export class SessionHostWorker {
 		this.#reporter.dispose();
 		await bounded("collab shutdown", () => this.#controller.shutdown(reason));
 		await bounded("session dispose", () => this.#session.dispose());
+		await bounded("auth storage close", async () => this.#authStorage.close());
 		await bounded("descendant sweep", () => killDescendants(process.pid));
 	}
 }

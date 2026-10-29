@@ -4,7 +4,7 @@
  *   journal.jsonl   one `JournalEvent` per line
  *   feedback.jsonl  one `FeedbackEntry` per line
  *
- * Both files are created mode 0600. When an append would take a file past `maxFileBytes` (10 MB) it becomes
+ * Both files use mode 0600 on POSIX; Windows relies on the state directory ACL. When an append would take a file past `maxFileBytes` (10 MB) it becomes
  * `<name>.1` (replacing the previous `.1`: one previous generation is kept) and a fresh file starts.
  *
  * Nothing but fixed identifiers is accepted: every field is validated against a closed set of keys, short
@@ -13,6 +13,7 @@
  */
 import type { FeedbackEntry, JournalEvent, JournalResponse } from "@omp-console/protocol";
 import * as fs from "node:fs/promises";
+import { isWindows } from "./platform";
 import * as path from "node:path";
 
 export const MAX_JOURNAL_EVENTS_PER_CALL = 200;
@@ -182,7 +183,7 @@ export class Journal {
 		if (size > 0 && size + bytes > this.#maxFileBytes) await fs.rename(file, `${file}.1`);
 		const handle = await fs.open(file, "a", 0o600);
 		try {
-			await handle.chmod(0o600);
+			if (!isWindows) await handle.chmod(0o600);
 			await handle.appendFile(payload);
 		} finally {
 			await handle.close();

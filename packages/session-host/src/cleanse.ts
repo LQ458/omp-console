@@ -16,6 +16,7 @@ import type { CleanseCommandResult, CleanseDiagnostic, CleanseDiagnosticReport }
 import { discoverCleanseDiagnosticSuite } from "@oh-my-pi/pi-coding-agent/cleanse/checkers";
 import type { AgentSession } from "@oh-my-pi/pi-coding-agent/session/agent-session";
 import { RequestError } from "./request-error";
+import { killNewMatchingChildrenNow, readProcessEntries } from "./process-tree-platform";
 
 const MAX_CHECKERS = 64;
 const MAX_AGENTS = 32;
@@ -34,10 +35,34 @@ interface DiscoveredCheckers {
 	skipped: CleanseSkippedChecker[];
 }
 
+interface CheckerProcessWatch {
+	knownPids: ReadonlySet<number>;
+	executable: string;
+	arguments: string[];
+}
+
 interface ActiveRun {
 	runId: string;
 	controller: AbortController;
 	promise: Promise<void>;
+	checkerProcesses: Map<string, CheckerProcessWatch>;
+}
+
+function parseCheckerCommand(command: string): string[] {
+	const tokens = command.match(/"(?:\\.|[^"\\])*"|\S+/g) ?? [];
+	return tokens.map(token => (token.startsWith('"') ? (JSON.parse(token) as string) : token));
+}
+
+function checkerProcessWatch(checker: { id: string; command?: string }): CheckerProcessWatch {
+	const [command = "", ...arguments_] = parseCheckerCommand(checker.command ?? "");
+	const executable = command
+		? (Bun.which(command) ?? Bun.which(command.replace(/\.(?:cmd|exe)$/i, "")) ?? command)
+		: "";
+	return {
+		knownPids: process.platform === "win32" ? new Set(readProcessEntries().map(entry => entry.pid)) : new Set<number>(),
+		executable,
+		arguments: arguments_.filter(argument => /^[A-Za-z0-9_./:=@+\\-]+$/.test(argument)),
+	};
 }
 
 /** Runs omp's cleanse orchestration with omp console state and cancellation instead of a terminal board. */
@@ -93,7 +118,12 @@ export class CleanseWorkerService {
 		};
 		this.#snapshot = initialStatus;
 		const controller = new AbortController();
-		const active: ActiveRun = { runId: options.runId, controller, promise: Promise.resolve() };
+		const active: ActiveRun = {
+			runId: options.runId,
+			controller,
+			promise: Promise.resolve(),
+			checkerProcesses: new Map(),
+		};
 		this.#active = active;
 		this.#publish();
 		active.promise = this.#execute(options, this.#getCwd(), controller.signal, active);
@@ -104,6 +134,7 @@ export class CleanseWorkerService {
 		if (!this.#active || this.#active.runId !== runId) {
 			throw new RequestError("conflict", "That cleanse run is no longer active");
 		}
+		this.#killRunningCheckers(this.#active);
 		this.#active.controller.abort();
 		return { ok: true };
 	}
@@ -115,6 +146,7 @@ export class CleanseWorkerService {
 	async close(): Promise<void> {
 		const active = this.#active;
 		if (!active) return;
+		this.#killRunningCheckers(active);
 		active.controller.abort();
 		await active.promise;
 		if (this.#active === active) this.#active = undefined;
@@ -129,7 +161,7 @@ export class CleanseWorkerService {
 	async #execute(options: CleanseStartOp, cwd: string, signal: AbortSignal, active: ActiveRun): Promise<void> {
 		try {
 			const scope: CleanseScope = options.scope;
-			const ui = this.#createUi();
+			const ui = this.#createUi(active);
 			const result = await runCleanse(
 				{
 					cwd,
@@ -159,38 +191,44 @@ export class CleanseWorkerService {
 		}
 	}
 
-	#createUi(): CleanseRunUi {
+	#createUi(active: ActiveRun): CleanseRunUi {
 		const board: CleanseRunUi["board"] = {
 			interactive: false,
 			log: text => this.#update(snapshot => this.#appendLog(snapshot, text)),
 			phase: text => this.#update(snapshot => {
 				snapshot.phase = text?.slice(0, MAX_TEXT);
 			}),
-			checkerStarted: checker => this.#update(snapshot => {
-				let row = snapshot.checkers.find(candidate => candidate.checker.id === checker.id);
-				if (!row) {
-					row = { checker: this.#checkerView(checker), status: "pending" };
-					snapshot.checkers.push(row);
-				}
-				row.status = "running";
-				delete row.result;
-			}),
-			checkerFinished: (check, durationMs) => this.#update(snapshot => {
-				const checker = this.#checkerView(check);
-				let row = snapshot.checkers.find(candidate => candidate.checker.id === check.id);
-				if (!row) {
-					row = { checker, status: "pending" };
-					snapshot.checkers.push(row);
-				}
-				row.checker = checker;
-				row.status = "completed";
-				row.result = {
-					id: check.id.slice(0, 200),
-					label: check.label.slice(0, MAX_TEXT),
-					durationMs,
-					diagnosticCount: check.diagnostics.length,
-				};
-			}),
+			checkerStarted: checker => {
+				active.checkerProcesses.set(checker.id, checkerProcessWatch(checker));
+				this.#update(snapshot => {
+					let row = snapshot.checkers.find(candidate => candidate.checker.id === checker.id);
+					if (!row) {
+						row = { checker: this.#checkerView(checker), status: "pending" };
+						snapshot.checkers.push(row);
+					}
+					row.status = "running";
+					delete row.result;
+				});
+			},
+			checkerFinished: (check, durationMs) => {
+				active.checkerProcesses.delete(check.id);
+				this.#update(snapshot => {
+					const checker = this.#checkerView(check);
+					let row = snapshot.checkers.find(candidate => candidate.checker.id === check.id);
+					if (!row) {
+						row = { checker, status: "pending" };
+						snapshot.checkers.push(row);
+					}
+					row.checker = checker;
+					row.status = "completed";
+					row.result = {
+						id: check.id.slice(0, 200),
+						label: check.label.slice(0, MAX_TEXT),
+						durationMs,
+						diagnosticCount: check.diagnostics.length,
+					};
+				});
+			},
 			repairFinished: () => this.#update(snapshot => {
 				snapshot.phase = "Verifying repairs…";
 			}),
@@ -223,6 +261,30 @@ export class CleanseWorkerService {
 			print: text => this.#update(snapshot => this.#appendLog(snapshot, text)),
 			printError: text => this.#update(snapshot => this.#appendLog(snapshot, text)),
 		};
+	}
+	#killRunningCheckers(active: ActiveRun): void {
+		if (process.platform !== "win32") return;
+		const watches = [...active.checkerProcesses.values()];
+		const first = watches[0];
+		if (!first) return;
+		const knownPids = new Set(first.knownPids);
+		for (let index = 1; index < watches.length; index += 1) {
+			const watch = watches[index];
+			if (!watch) continue;
+			for (const pid of knownPids) {
+				if (!watch.knownPids.has(pid)) knownPids.delete(pid);
+			}
+		}
+		killNewMatchingChildrenNow(process.pid, knownPids, entry => {
+			const commandLine = entry.commandLine.toLowerCase();
+			return watches.some(
+				watch =>
+					!watch.knownPids.has(entry.pid) &&
+					watch.executable.length > 0 &&
+					commandLine.includes(watch.executable.toLowerCase()) &&
+					watch.arguments.every(argument => commandLine.includes(argument.toLowerCase())),
+			);
+		});
 	}
 
 	#finish(result: CleanseCommandResult): void {

@@ -2,6 +2,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import type { SessionRecipe, SessionRecipeInput } from "@omp-console/protocol";
 import { atomicWriteFile } from "../workspaces/files";
+import { isWindows } from "../platform";
 
 interface RecipeFile {
 	version: 1;
@@ -146,7 +147,7 @@ export class RecipeStore {
 			return;
 		}
 		this.#recipes = parsed.recipes;
-		await fs.chmod(this.#file, 0o600);
+		if (!isWindows) await fs.chmod(this.#file, 0o600);
 	}
 
 	async #persist(recipes: SessionRecipe[] = this.#recipes): Promise<void> {

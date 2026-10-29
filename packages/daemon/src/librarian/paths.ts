@@ -3,6 +3,7 @@ import * as os from "node:os";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { isEnoent } from "@oh-my-pi/pi-utils";
+import { isWindows } from "../platform";
 import type { PathSuggestions, WorkspaceUsage } from "@omp-console/protocol";
 
 export interface WorkspaceRoots {
@@ -42,10 +43,19 @@ interface DirectoryMatch {
 }
 
 
-function within(root: string, candidate: string): boolean {
-	const relative = path.relative(root, candidate);
-	return relative === "" || (relative !== ".." && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative));
+export function isPathWithin(
+	root: string,
+	candidate: string,
+	pathApi: Pick<typeof path, "relative" | "isAbsolute" | "sep"> = path,
+): boolean {
+	const relative = pathApi.relative(root, candidate);
+	return relative === "" || (relative !== ".." && !relative.startsWith(`..${pathApi.sep}`) && !pathApi.isAbsolute(relative));
 }
+
+function within(root: string, candidate: string): boolean {
+	return isPathWithin(root, candidate);
+}
+
 
 export class PathSuggestionError extends Error {
 	constructor(directory: string, cause: unknown) {
@@ -84,12 +94,14 @@ async function directoryEntries(
 	}
 }
 
-function safeDirectory(entry: Dirent): boolean {
-	return entry.isDirectory() &&
-		!entry.isSymbolicLink() &&
-		!entry.name.startsWith(".") &&
-		!SKIPPED_DIRECTORY_NAMES.has(entry.name.toLowerCase());
+export function isSafeDirectoryName(name: string): boolean {
+	return !name.startsWith(".") && !SKIPPED_DIRECTORY_NAMES.has(name.toLowerCase());
 }
+
+function safeDirectory(entry: Dirent): boolean {
+	return entry.isDirectory() && !entry.isSymbolicLink() && isSafeDirectoryName(entry.name);
+}
+
 
 async function directoriesAtDepth(root: string): Promise<Array<{ path: string; depth: number }>> {
 	if (!await isRealDirectory(root)) return [];
@@ -228,7 +240,7 @@ async function homePathSuggestions(queryValue: string, homeDirectory: string, al
 
 	const deadline = Date.now() + MAX_DIRECTORY_SCAN_MS;
 
-	if (input === "" || (!input.startsWith("~") && !input.startsWith("/") && !input.includes("/"))) {
+	if (input === "" || (!input.startsWith("~") && !path.isAbsolute(input) && !input.includes("/") && !(isWindows && input.includes("\\")))) {
 		const needle = input.toLowerCase();
 		for (const entry of await directoryEntries(home, deadline)) {
 			if (Date.now() >= deadline) break;
@@ -245,14 +257,21 @@ async function homePathSuggestions(queryValue: string, homeDirectory: string, al
 		return output;
 	}
 
-	if (input.startsWith("~") && input !== "~" && !input.startsWith("~/")) return output;
-	const relative = input === "~" ? "" : input.startsWith("~/") ? input.slice(2) : input.startsWith("/") ? path.relative(home, path.resolve(input)) : input;
+	const homePath = input === "~" || input.startsWith("~/") || (isWindows && input.startsWith("~\\"));
+	if (input.startsWith("~") && !homePath) return output;
+	const relative = input === "~"
+		? ""
+		: homePath
+			? input.slice(2)
+			: path.isAbsolute(input)
+				? path.relative(home, path.resolve(input))
+				: input;
 	const candidate = relative === "" ? home : path.resolve(home, relative);
 	if (!within(home, candidate)) return output;
 	const components = path.relative(home, candidate).split(path.sep).filter(Boolean);
 	if (components.some(component => component.startsWith(".") || SKIPPED_DIRECTORY_NAMES.has(component.toLowerCase()))) return output;
-	if (input.startsWith("~/")) output.typedPath = candidate;
-	const trailingSeparator = input.endsWith("/") || input.endsWith("\\");
+	if (homePath && input !== "~") output.typedPath = candidate;
+	const trailingSeparator = input.endsWith("/") || (isWindows && input.endsWith("\\"));
 	if (candidate === home && !trailingSeparator) add(home);
 	else if (!trailingSeparator && await isRealDirectory(candidate) && await resolvesInsideHome(home, candidate)) add(candidate);
 
@@ -285,7 +304,7 @@ export async function suggestPaths(
 		...new Set(roots.projectRoots.map(root => path.resolve(root))),
 	].map(entry => typeof entry === "string" ? { path: entry, kind: "project" as const } : entry);
 	if (rootEntries.length === 0) return homePathSuggestions(input, homeDirectory, true);
-	if (input.startsWith("~") || input.startsWith("/")) return homePathSuggestions(input, homeDirectory, false);
+	if (input.startsWith("~") || path.isAbsolute(input)) return homePathSuggestions(input, homeDirectory, false);
 
 	const found = await Promise.all(rootEntries.map(async root => ({ root, directories: await directoriesAtDepth(root.path) })));
 	const matches: DirectoryMatch[] = [];

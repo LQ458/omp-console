@@ -17,6 +17,7 @@ import { classifyLaunchProgram, validateLaunchProgram } from "@oh-my-pi/pi-codin
 import { resolveToCwd } from "@oh-my-pi/pi-coding-agent/tools/path-utils";
 import type { AgentSession } from "@oh-my-pi/pi-coding-agent/session/agent-session";
 import { RequestError } from "./request-error";
+import { killNewMatchingChildrenNow, readProcessEntries, type ProcessEntry } from "./process-tree-platform";
 
 const STACK_FRAME_LIMIT = 50;
 const OUTPUT_LIMIT_BYTES = 32 * 1024;
@@ -78,6 +79,38 @@ function requireAdapter(selection: LaunchAdapterSelection): DapResolvedAdapter {
 	throw new RequestError("bad-request", "No configured DAP adapter matches this program.");
 }
 
+function adapterProcessMatches(adapter: DapResolvedAdapter, entry: ProcessEntry): boolean {
+	const executable =
+		Bun.which(adapter.command) ??
+		Bun.which(adapter.command.replace(/\.(?:cmd|exe)$/i, "")) ??
+		adapter.command;
+	const commandLine = entry.commandLine.toLowerCase();
+	return (
+		commandLine.includes(executable.toLowerCase()) &&
+		adapter.args
+			.filter(argument => /^[A-Za-z0-9_./:=@+\\-]+$/.test(argument))
+			.every(argument => commandLine.includes(argument.toLowerCase()))
+	);
+}
+
+async function withWindowsAdapterCleanup<T>(
+	adapter: DapResolvedAdapter,
+	signal: AbortSignal | undefined,
+	operation: () => Promise<T>,
+): Promise<T> {
+	if (process.platform !== "win32" || !signal) return operation();
+	signal.throwIfAborted();
+	const knownPids = new Set(readProcessEntries().map(entry => entry.pid));
+	const reap = (): void => killNewMatchingChildrenNow(process.pid, knownPids, entry => adapterProcessMatches(adapter, entry));
+	signal.addEventListener("abort", reap, { once: true });
+	try {
+		return await operation();
+	} finally {
+		signal.removeEventListener("abort", reap);
+		if (signal.aborted) reap();
+	}
+}
+
 /** Exposes an isolated omp DAP manager and adapter selection to headless omp console clients. */
 export class DebugModeService {
 	readonly #session: AgentSession;
@@ -109,13 +142,19 @@ export class DebugModeService {
 				const kind = await classifyLaunchProgram(program);
 				const adapter = requireAdapter(selectLaunchAdapter(program, cwd, op.adapter, kind));
 				validateLaunchProgram(program, cwd, kind, adapter);
-				const debugSession = await this.#manager.launch({
-					adapter,
-					program,
-					...(op.args === undefined ? {} : { args: op.args }),
-					cwd,
-					extraLaunchArguments: resolveLaunchOverrides(adapter, program, kind),
-				}, signal, DEBUG_OPERATION_TIMEOUT_MS);
+				const debugSession = await withWindowsAdapterCleanup(adapter, signal, () =>
+					this.#manager.launch(
+						{
+							adapter,
+							program,
+							...(op.args === undefined ? {} : { args: op.args }),
+							cwd,
+							extraLaunchArguments: resolveLaunchOverrides(adapter, program, kind),
+						},
+						signal,
+						DEBUG_OPERATION_TIMEOUT_MS,
+					),
+				);
 				return { ok: true, debugSession: sessionView(debugSession) };
 			}
 			case "attach": {
@@ -128,13 +167,19 @@ export class DebugModeService {
 					}
 					throw new RequestError("bad-request", "No available DAP adapter can attach to this target.");
 				}
-				const debugSession = await this.#manager.attach({
-					adapter,
-					cwd,
-					...(op.pid === undefined ? {} : { pid: op.pid }),
-					...(op.port === undefined ? {} : { port: op.port }),
-					...(op.host === undefined ? {} : { host: op.host }),
-				}, signal, DEBUG_OPERATION_TIMEOUT_MS);
+				const debugSession = await withWindowsAdapterCleanup(adapter, signal, () =>
+					this.#manager.attach(
+						{
+							adapter,
+							cwd,
+							...(op.pid === undefined ? {} : { pid: op.pid }),
+							...(op.port === undefined ? {} : { port: op.port }),
+							...(op.host === undefined ? {} : { host: op.host }),
+						},
+						signal,
+						DEBUG_OPERATION_TIMEOUT_MS,
+					),
+				);
 				return { ok: true, debugSession: sessionView(debugSession) };
 			}
 			case "threads": {

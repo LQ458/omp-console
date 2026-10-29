@@ -3,7 +3,7 @@ export interface PeerDaemon {
 	name: string;
 	/** Base HTTP(S) URL of the peer daemon. */
 	url: string;
-	/** 0600 file containing a device token issued by the remote daemon. */
+	/** Private file containing a device token; POSIX requires mode 0600, Windows uses the state directory ACL. */
 	tokenFile?: string;
 	/** Loaded at daemon startup; never returned by peer APIs or logged. */
 	token?: string;

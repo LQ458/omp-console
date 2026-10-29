@@ -4,6 +4,7 @@ import type { Supervisor } from "../supervisor";
 import { overnightWorkerOptions, type OvernightController } from "./controller";
 import { runOvernightPreflight, type PreflightOptions } from "./preflight";
 import { OvernightStore } from "./store";
+import * as path from "node:path";
 
 const MAX_TASK_LENGTH = 64 * 1024;
 const MAX_PROMPT_LENGTH = 64 * 1024;
@@ -285,7 +286,7 @@ export function createOvernightRoutes(options: OvernightRoutesOptions): Overnigh
 		if (url.pathname === "/api/overnight/preflight") {
 			if (req.method !== "GET") return methodNotAllowed(req, ["GET"]);
 			const cwd = url.searchParams.get("cwd");
-			if (!cwd || !cwd.startsWith("/")) return fail(400, "bad-request", "cwd must be an absolute path");
+			if (!cwd || !path.isAbsolute(cwd)) return fail(400, "bad-request", "cwd must be an absolute path");
 			try {
 				const result: { checks: PreflightCheck[] } = await runOvernightPreflight(cwd, options.preflightOptions?.(cwd));
 				return json(200, result);

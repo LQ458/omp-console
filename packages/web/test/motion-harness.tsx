@@ -1,4 +1,4 @@
-import type { NewSessionSuggestions, SessionCard, SessionSummary } from "@omp-console/protocol";
+import type { NewSessionBrowseResponse, NewSessionSuggestions, SessionCard, SessionSummary } from "@omp-console/protocol";
 import { StrictMode, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { createRoot } from "react-dom/client";
@@ -25,6 +25,9 @@ const pickerApi: NewSessionPickerProps["api"] = {
 			recent: [{ cwd: "/work/motion-demo", name: "motion-demo", sessions30d: 3, lastUsedAt: Date.now() }],
 			roots: [{ path: "/work", kind: "project" }],
 		};
+	},
+	async browseNewSession(dir?: string): Promise<NewSessionBrowseResponse> {
+		return { dir: dir ?? "/home/alice", home: "/home/alice", entries: [], truncated: false };
 	},
 	async pathSuggestions() {
 		return { matches: [] };

@@ -11,14 +11,14 @@ Between releases, the [Desktop Linux workflow](../../.github/workflows/desktop-l
 - Debian/Ubuntu: install the `.deb` with `sudo apt install ./omp-console_*.deb`.
 - AppImage: make the `.AppImage` executable with `chmod +x omp-console*.AppImage`, then launch it.
 
-The app connects to `http://127.0.0.1:7490` on first launch; start the omp-console daemon first. Pairing reads `~/.omp-console/pairing-code`. If that file is missing, run `omp-console pair` in a terminal, then reopen the app. The desktop package registers `omp-console://` links. Project moves between computers require macOS. On Wayland the system does not permit a global shortcut; the app shows a notification and can be reopened from the applications menu.
+The app connects to `http://127.0.0.1:7490` on first launch; start the omp-console daemon first. Pairing reads `~/.omp-console/pairing-code` on macOS/Linux and `%USERPROFILE%\.omp-console\pairing-code` on Windows. If the file is missing, run `omp-console pair` in a terminal, then reopen the app. The desktop package registers `omp-console://` links. Project moves between computers require macOS. On Wayland the system does not permit a global shortcut; the app shows a notification and can be reopened from the applications menu.
 
 
 The native Tauri 2 shell loads the configured omp-console daemon. On macOS it uses the system WKWebView; on Linux it uses WebKitGTK; on Windows it uses WebView2. The default daemon URL is `http://127.0.0.1:7490`; macOS runtime settings are stored in `~/Library/Application Support/dev.ompconsole.app/config.json`. HTTP is accepted only for loopback hosts; other hosts require HTTPS. The shell opens off-origin links in the default browser.
 
 ## Windows desktop app
 
-The Windows build uses `tauri.windows.conf.json` (NSIS and MSI installers, `icons/icon.ico`). On Windows the daemon runs inside WSL 2 and the app reaches it at `http://127.0.0.1:7490` through WSL's localhost forwarding. The app cannot read the pairing-code file inside WSL by default; run `omp-console pair` in Ubuntu and type the code. Project moves require macOS. `generate-icon.sh` regenerates `icon.ico` together with the macOS icons.
+The Windows build uses `tauri.windows.conf.json` (NSIS and MSI installers, `icons/icon.ico`). The daemon runs natively on Windows 10/11 x64 as a per-user Scheduled Task; install it from PowerShell with `.\scripts\install.ps1` (see the [install guide](../../docs/INSTALL.md)). The app reaches it at `http://127.0.0.1:7490` and reads the pairing code from `%USERPROFILE%\.omp-console\pairing-code`. Project moves require macOS. `generate-icon.sh` regenerates `icon.ico` together with the macOS icons.
 
 ## Build
 

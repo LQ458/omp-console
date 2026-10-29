@@ -29,6 +29,15 @@ afterEach(async () => {
 	await stopTestDaemons();
 });
 
+const caseInsensitiveTemporaryVolume = (() => {
+	const directory = makeTmp("deck-case-probe-");
+	const file = path.join(directory, "probe.jsonl");
+	fs.writeFileSync(file, "");
+	const insensitive = fs.existsSync(path.join(directory, "PROBE.JSONL"));
+	fs.rmSync(directory, { recursive: true, force: true });
+	return insensitive;
+})();
+
 async function createSession(t: TestDaemon, body: Record<string, unknown> = {}): Promise<SessionSummary> {
 	const res = await t.post("/api/sessions", { cwd: t.dir, ...body });
 	expect(res.status).toBe(201);
@@ -671,7 +680,7 @@ describe("session delete (trash) API", () => {
 function writeFile(t: TestDaemon, name: string): string {
 	const file = path.join(t.sessionsDir, name);
 	fs.writeFileSync(file, "{}\n");
-	return fs.realpathSync(file);
+	return fs.realpathSync.native(file);
 }
 
 describe("POST /api/sessions", () => {
@@ -1053,6 +1062,17 @@ describe("POST /api/sessions", () => {
 		expect(res.status).toBe(500);
 		expect(await res.json()).toEqual({ error: "model not found: nope", code: "internal" });
 	});
+
+	it.skipIf(!caseInsensitiveTemporaryVolume)("rejects a case-only alias of an already hosted session", async () => {
+		const t = await startTestDaemon({ hostedSessionNames: ["alias.jsonl"] });
+		const file = writeFile(t, "alias.jsonl");
+		const alias = path.join(path.dirname(file), "ALIAS.JSONL");
+		expect(fs.existsSync(alias)).toBe(true);
+		await createSession(t, { resumeSessionFile: file });
+		const duplicate = await t.post("/api/sessions", { cwd: t.dir, resumeSessionFile: alias });
+		expect(duplicate.status).toBe(409);
+		expect(((await duplicate.json()) as ApiError).code).toBe("conflict");
+	});
 });
 
 describe("POST /api/sessions/:id/restart", () => {
@@ -1208,7 +1228,7 @@ describe("DELETE /api/sessions/:id", () => {
 		const again = await t.del(`/api/sessions/${session.id}`);
 		expect(again.status).toBe(404);
 		expect(((await again.json()) as ApiError).code).toBe("not-found");
-	});
+	}, process.platform === "win32" ? 30_000 : 5_000);
 });
 
 describe("GET /api/health", () => {
@@ -1251,7 +1271,7 @@ describe("POST /api/push/subscribe", () => {
 			["https://web.push.apple.com/abc123", "iPhone 2"],
 			["https://web.push.apple.com/other", "iPhone"],
 		]);
-		expect(fs.statSync(file).mode & 0o777).toBe(0o600);
+		if (process.platform !== "win32") expect(fs.statSync(file).mode & 0o777).toBe(0o600);
 	});
 
 	it("rejects invalid subscriptions without persisting anything", async () => {

@@ -6,10 +6,25 @@ import * as path from "node:path";
 import { classifyProcess, ORPHAN_GRACE_MS } from "../src/processes/classify";
 import type { ProcessPorts } from "../src/processes/ports";
 import { createProcessRoutes } from "../src/processes/routes";
-import { parseLsofOutput, parsePsOutput, ProcessScanner, scanOmpProcesses, sumProcessTreeRss } from "../src/processes/scan";
+import { parseLsofOutput, parsePsOutput, parseWin32ProcessOutput, ProcessScanner, scanOmpProcesses, sumProcessTreeRss } from "../src/processes/scan";
 
 function fixture(name: string): string {
 	return fs.readFileSync(path.join(import.meta.dir, "fixtures", name), "utf8");
+}
+
+function processFixture(): string {
+	return fixture(process.platform === "win32" ? "processes.windows.json" : "processes.txt");
+}
+
+function platformSnapshot(posixOutput: string): string {
+	if (process.platform !== "win32") return posixOutput;
+	return JSON.stringify(parsePsOutput(posixOutput).map(row => ({
+		ProcessId: row.pid,
+		ParentProcessId: row.ppid,
+		WorkingSetSize: row.rssBytes,
+		CommandLine: row.command,
+		CreationDate: new Date(row.startedAt).toISOString(),
+	})));
 }
 
 function tempDir(): string {
@@ -93,14 +108,15 @@ async function callRoute(
 }
 
 describe("process output parsing and classification", () => {
-	it("maps ps and lsof fixture rows into RSS trees, cwd and session writes", async () => {
+	it("maps platform process rows into RSS trees, cwd and session metadata", async () => {
 		const now = Date.now();
-		const ps = fixture("processes.txt");
-		const lsof = fixture("processes.lsof");
-		const rows = parsePsOutput(ps);
+		const ps = processFixture();
+		const lsof = process.platform === "win32" ? "" : fixture("processes.lsof");
+		const rows = process.platform === "win32" ? parseWin32ProcessOutput(ps) : parsePsOutput(ps);
 		expect(rows.map(row => row.pid)).toEqual([100, 101, 102, 200]);
 		expect(sumProcessTreeRss(rows, 100)).toBe((1200 + 500 + 250) * 1024);
-		expect(parseLsofOutput(lsof).get(100)).toMatchObject({ cwd: "/tmp/project", sessionFiles: ["/tmp/sessions/session-100.jsonl"] });
+		if (process.platform === "win32") expect(parseLsofOutput(lsof).get(100)).toBeUndefined();
+		else expect(parseLsofOutput(lsof).get(100)).toMatchObject({ cwd: "/tmp/project", sessionFiles: ["/tmp/sessions/session-100.jsonl"] });
 
 		const processes = await scanOmpProcesses([worker()], [session()], now, {
 			readPs: async () => ps,
@@ -108,29 +124,48 @@ describe("process output parsing and classification", () => {
 			statMtime: async () => now - 60_000,
 		});
 		const deckWorker = processes.find(item => item.pid === 100)!;
-		expect(deckWorker).toMatchObject({ kind: "omp-console-worker", cwd: "/tmp/project", sessionId: "session-100", state: "active" });
+		expect(deckWorker).toMatchObject({
+			kind: "omp-console-worker",
+			cwd: "/tmp/project",
+			sessionId: "session-100",
+			sessionFile: "/tmp/sessions/session-100.jsonl",
+			state: "active",
+		});
 		expect(deckWorker.rssBytes).toBe((1200 + 500 + 250) * 1024);
 		expect(processes.find(item => item.pid === 200)?.kind).toBe("omp-broker");
+		if (process.platform === "win32") expect(processes.find(item => item.pid === 101)?.sessionFile).toBeUndefined();
+	});
+
+	it("parses the Windows CIM fixture into process identities and RSS bytes", () => {
+		const rows = parseWin32ProcessOutput(fixture("processes.windows.json"));
+		expect(rows.map(({ pid, ppid, startedAt, rssBytes }) => [pid, ppid, startedAt, rssBytes])).toEqual([
+			[100, 1, Date.parse("2026-10-20T10:00:00"), 1_228_800],
+			[101, 100, Date.parse("2026-10-20T10:01:00"), 512_000],
+			[102, 101, Date.parse("2026-10-20T10:02:00"), 256_000],
+			[200, 1, Date.parse("2026-10-20T09:00:00"), 102_400],
+		]);
+		expect(rows[0]!.command).toBe("C:\\Users\\runneradmin\\work\\omp-console\\packages\\session-host\\src\\main.ts");
 	});
 
 	it("marks a surviving worker child orphan after 30 seconds but never orphans detached brokers by parentage", async () => {
-		let ps = fixture("processes.txt");
+		let ps = processFixture();
 		const scanner = new ProcessScanner({ readPs: async () => ps, readLsof: async () => "" });
 		const sessions = [session()];
 		const started = Date.now();
 		await scanner.scan([worker()], sessions, started);
-		ps = [
+		ps = platformSnapshot([
 			"PID PPID LSTART RSS TTY COMMAND",
 			"101 1 Tue Oct 20 10:01:00 2026 500 ?? /tmp/omp-helper",
 			"102 1 Tue Oct 20 10:02:00 2026 250 ?? /usr/bin/tool child",
 			"200 1 Tue Oct 20 09:00:00 2026 100 ?? daemon_broker --detached",
-		].join("\n");
+		].join("\n"));
 		await scanner.scan([], [], started + 1);
 		const processes = await scanner.scan([], [], started + ORPHAN_GRACE_MS + 2);
 		expect(processes.find(item => item.pid === 101)?.state).toBe("orphan");
 		expect(processes.find(item => item.pid === 102)?.state).toBe("orphan");
 		expect(processes.find(item => item.pid === 200)?.state).not.toBe("orphan");
 	});
+
 
 	it("classifies recently written sessions as active and keeps a detached lsp mux non-orphan", () => {
 		const now = 1_000_000;
@@ -145,7 +180,7 @@ describe("process routes", () => {
 		let signals: Array<[number, string]> = [];
 		const route = createProcessRoutes(ports, tempDir(), {
 			scanner: new ProcessScanner({
-				readPs: async () => "100 1 Tue Oct 20 10:00:00 2026 1200 ?? /usr/local/bin/omp --cwd /tmp/a",
+				readPs: async () => platformSnapshot("100 1 Tue Oct 20 10:00:00 2026 1200 ?? /usr/local/bin/omp --cwd /tmp/a"),
 				readLsof: async () => "",
 			}),
 			signalProcess: (pid, signal) => signals.push([pid, signal]),
@@ -168,7 +203,7 @@ describe("process routes", () => {
 		ports.sessions = [session()];
 		ports.workers = [worker()];
 		const route = createProcessRoutes(ports, tempDir(), {
-			scanner: new ProcessScanner({ readPs: async () => fixture("processes.txt"), readLsof: async () => "" }),
+			scanner: new ProcessScanner({ readPs: async () => processFixture(), readLsof: async () => "" }),
 			signalProcess: () => {
 				throw new Error("omp-console workers must never be signaled directly");
 			},
@@ -186,7 +221,7 @@ describe("process routes", () => {
 		const ports = new FakeProcessPorts();
 		ports.sessions = [session()];
 		ports.workers = [worker()];
-		let ps = fixture("processes.txt");
+		let ps = processFixture();
 		let now = Date.now();
 		const releaseSleep = Promise.withResolvers<void>();
 		const signals: Array<[number, string]> = [];
@@ -204,12 +239,12 @@ describe("process routes", () => {
 			await callRoute(route, "GET", "/api/processes");
 			ports.sessions = [];
 			ports.workers = [];
-			ps = [
+			ps = platformSnapshot([
 				"PID PPID LSTART RSS TTY COMMAND",
 				"101 1 Tue Oct 20 10:01:00 2026 500 ?? /tmp/omp-helper",
 				"102 1 Tue Oct 20 10:02:00 2026 250 ?? /usr/bin/tool child",
 				"200 1 Tue Oct 20 09:00:00 2026 100 ?? daemon_broker --detached",
-			].join("\n");
+			].join("\n"));
 			now += 2_001;
 			await callRoute(route, "GET", "/api/processes");
 			now += ORPHAN_GRACE_MS + 1;
@@ -229,7 +264,7 @@ describe("process routes", () => {
 		const ports = new FakeProcessPorts();
 		ports.sessions = [session()];
 		ports.workers = [worker()];
-		let ps = fixture("processes.txt");
+		let ps = processFixture();
 		let now = Date.now();
 		const releaseSleep = Promise.withResolvers<void>();
 		const signals: Array<[number, string]> = [];
@@ -244,17 +279,17 @@ describe("process routes", () => {
 			await callRoute(route, "GET", "/api/processes");
 			ports.sessions = [];
 			ports.workers = [];
-			ps = [
+			ps = platformSnapshot([
 				"PID PPID LSTART RSS TTY COMMAND",
 				"101 1 Tue Oct 20 10:01:00 2026 500 ?? /tmp/omp-helper",
 				"102 1 Tue Oct 20 10:02:00 2026 250 ?? /usr/bin/tool child",
-			].join("\n");
+			].join("\n"));
 			now += 2_001;
 			await callRoute(route, "GET", "/api/processes");
 			now += ORPHAN_GRACE_MS + 1;
 			expect((await callRoute(route, "POST", "/api/processes/102/stop", { confirm: true }))?.status).toBe(202);
 			// The orphan exits and an unrelated program gets pid 102 (new start time, new command).
-			ps = ["PID PPID LSTART RSS TTY COMMAND", "102 1 Tue Oct 20 11:30:00 2026 900 ?? /usr/bin/vim notes.txt"].join("\n");
+			ps = platformSnapshot(["PID PPID LSTART RSS TTY COMMAND", "102 1 Tue Oct 20 11:30:00 2026 900 ?? /usr/bin/vim notes.txt"].join("\n"));
 			releaseSleep.resolve();
 			for (let i = 0; i < 20; i++) await Bun.sleep(1);
 			expect(signals).toEqual([[102, "SIGTERM"]]);
@@ -274,7 +309,7 @@ describe("process routes", () => {
 		];
 		const route = createProcessRoutes(ports, tempDir(), {
 			now: () => now,
-			scanner: new ProcessScanner({ readPs: async () => "", readLsof: async () => "" }),
+			scanner: new ProcessScanner({ readPs: async () => platformSnapshot(""), readLsof: async () => "" }),
 			policyCheckIntervalMs: 60_000,
 		});
 		try {
@@ -295,7 +330,7 @@ describe("process routes", () => {
 		const scanner = new ProcessScanner({
 			readPs: async () => {
 				reads++;
-				return fixture("processes.txt");
+				return processFixture();
 			},
 			readLsof: async () => "",
 		});

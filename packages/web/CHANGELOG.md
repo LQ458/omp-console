@@ -3,7 +3,9 @@
 ## [Unreleased]
 
 ### Added
+- The new-session picker is a desktop dialog and mobile sheet with recent projects, home-folder browsing, typed paths, and inline folder creation.
 - Session-scoped sheets can float, resize, and maximize over the deck workspace on desktop.
+- A skippable, keyboard-accessible first-visit tour guides sessions, starting a session, the composer, Settings, and phone pairing; replay it in Settings or with `/tour`.
 - Phone Actions shows up to ten next-step suggestions and twenty ranked actions, with truncated suggestions editable in the composer.
 - The composer and Cmd+K route `/tan`, `/omfg`, and `/cleanse` to native panels; Tan results link to Agents, OMFG rules require review before saving, and Cleanse shows repair progress with cancellation.
 - Skills and Git session panels and browser-based WebM recording for session display capture.
@@ -15,6 +17,7 @@
 - Added native pause, queue, restart, collaboration, and browser-only command controls to the composer, command palette, and phone Actions panel.
 - Remote-debugger startup requires confirmation with an unauthenticated local code-execution warning; diagnostic action buttons wrap on phones.
 - Optional librarian, agenda, quick-ask, and peer UI follows daemon capabilities; collaboration links are view-only by default, and offline transcript caching stays disabled until enabled in settings.
+- Web paths accept Windows drive-letter and UNC forms for folder selection, session grouping, dropped-file mentions, and home-relative display; POSIX path behavior remains unchanged.
 
 ### Fixed
 - Floating panels keep their menus and other panes usable; resizing preserves the opposite edge.

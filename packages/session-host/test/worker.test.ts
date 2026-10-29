@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { CollabSocket } from "@oh-my-pi/pi-coding-agent/collab/relay-client";
 import { importRoomKey } from "@oh-my-pi/pi-coding-agent/collab/crypto";
+import { childPidsMatching } from "./host-test-helpers";
 import {
 	Fixture,
 	newRoom,
@@ -323,42 +324,44 @@ describe("worker over a relay", () => {
 });
 
 describe("shutdown", () => {
-	/** Starts a worker with a bash child (`sleep <n>`) running so there is something to orphan. */
+	/** Starts a worker with a Bun child process running so there is something to orphan. */
 	async function workerWithChild(seconds: number) {
 		fixture = new Fixture();
 		const room = newRoom();
 		const worker = fixture.spawn(room);
 		await worker.ready();
 		const guest = await liveGuest(fixture, room);
+		const marker = `omp-console-worker-child-${seconds}`;
 		guest.sendPrompt(`SLEEP:${seconds}`);
-		await waitUntil("sleep child running", () => pidsMatching(`sleep ${seconds}`).length > 0, 30_000);
-		return worker;
+		await waitUntil("Bun child running", () => childPidsMatching(worker.pid, marker).length > 0, 30_000, 100);
+		return { worker, marker };
 	}
 
-	async function expectCleanExit(worker: WorkerProcess, seconds: number, trigger: () => void, code: number) {
+	async function expectCleanExit(worker: WorkerProcess, marker: string, trigger: () => void, code: number) {
 		const startedAt = Date.now();
 		trigger();
 		const exitCode = await Promise.race([worker.exited, sleep(6_000).then(() => "timeout" as const)]);
 		expect(exitCode).toBe(code);
 		expect(Date.now() - startedAt).toBeLessThan(5_000);
-		await waitUntil("no orphaned children", () => pidsMatching(`sleep ${seconds}`).length === 0, 2_000);
+		await waitUntil("no orphaned children", () => pidsMatching(marker).length === 0, 2_000, 100);
 		expect(worker.proc.killed || worker.proc.exitCode !== null).toBe(true);
 	}
 
 	test("stop command ends the process within 5 s and leaves no children", async () => {
-		const worker = await workerWithChild(7731);
-		await expectCleanExit(worker, 7731, () => worker.send({ t: "stop" }), 0);
+		const { worker, marker } = await workerWithChild(7731);
+		await expectCleanExit(worker, marker, () => worker.send({ t: "stop" }), 0);
 	}, 90_000);
 
 	test("stdin EOF ends the process within 5 s and leaves no children", async () => {
-		const worker = await workerWithChild(7732);
-		await expectCleanExit(worker, 7732, () => void worker.proc.stdin.end(), 0);
+		const { worker, marker } = await workerWithChild(7732);
+		await expectCleanExit(worker, marker, () => void worker.proc.stdin.end(), 0);
 	}, 90_000);
 
-	test("SIGTERM ends the process within 5 s and leaves no children", async () => {
-		const worker = await workerWithChild(7733);
+	// Windows delivers SIGTERM as a hard kill; stop and EOF exercise its cleanup path.
+	test.skipIf(process.platform === "win32")("SIGTERM ends the process within 5 s and leaves no children", async () => {
+		const { worker, marker } = await workerWithChild(7733);
 		// SIGTERM goes through the shared postmortem handler: our teardown runs as its cleanup, then 128+15.
-		await expectCleanExit(worker, 7733, () => worker.proc.kill("SIGTERM"), 143);
+		await expectCleanExit(worker, marker, () => worker.proc.kill("SIGTERM"), 143);
 	}, 90_000);
 
 	test("a pending question does not hold shutdown", async () => {

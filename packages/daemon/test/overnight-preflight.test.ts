@@ -157,4 +157,21 @@ describe("overnight preflight", () => {
 		expect(checks.get("keep-awake")).toMatchObject({ status: "warn" });
 		expect(checks.get("keep-awake")?.detail).toContain("Access denied");
 	});
+	it("reports Windows keep-awake as unavailable without probing systemd-inhibit", async () => {
+		const calls: Call[] = [];
+		const preflight = await runOvernightPreflight("/tmp/project", {
+			platform: "win32",
+			run: async (command, args, options) => {
+				calls.push({ command, args, options });
+				return result(0);
+			},
+		});
+		const checks = checksById(preflight.checks);
+		expect(checks.get("keep-awake")).toMatchObject({
+			status: "warn",
+			detail: expect.stringContaining("unavailable on Windows"),
+		});
+		expect(calls.some(call => call.command === "systemd-inhibit")).toBe(false);
+	});
+
 });

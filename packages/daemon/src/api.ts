@@ -17,6 +17,7 @@ import {
 	type ListSessionsResponse,
 	type ListSessionRecipesResponse,
 	type NewSessionSuggestions,
+	type NewSessionBrowseResponse,
 	type PathSuggestions,
 	type PinSessionResponse,
 	type PushPublicKeyResponse,
@@ -48,6 +49,7 @@ import * as os from "node:os";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { PathSuggestionError, suggestPaths, workspaceSuggestions, type WorkspaceRoots } from "./librarian/paths";
+import { NewSessionBrowseError, browseNewSessionDirectory } from "./new-session-browse";
 import { searchTranscriptFiles } from "./history/transcript-search";
 import { formatRoomLink, originFromRequest } from "./link";
 import type { OvernightRoutes } from "./overnight/routes";
@@ -57,6 +59,7 @@ import type { PushSender } from "./push-sender";
 import type { Relay } from "./relay";
 import type { ArchiveStore, ArchiveRecord } from "./archive";
 import { canonicalSessionFile, type HostedSessionStore } from "./hosted-sessions";
+import { sessionPathKey } from "./session-key";
 import { type ModelControl, ModelControlError } from "./model-control";
 import { type Supervisor, SupervisorError } from "./supervisor";
 import {
@@ -722,11 +725,11 @@ export function createApi(deps: ApiDeps): (req: Request) => Promise<Response> {
 		if (pathname === "/api/new-session/suggestions") {
 			allow(req, "GET");
 			// Only sessions the user sees count as recent folders: no hidden internal or archived sessions.
-			const internal = supervisor.list().flatMap(s => (s.hidden && s.sessionFile ? [s.sessionFile] : []));
+			const internal = new Set(supervisor.list().flatMap(s => (s.hidden && s.sessionFile ? [sessionPathKey(s.sessionFile)] : [])));
 			const recent = (await deps.listRecent()).filter(s =>
 				!s.hidden &&
 				!deps.archiveStore.isArchived(s.id) &&
-				!(s.sessionFile && (internal.includes(s.sessionFile) || deps.isHiddenSessionFile?.(s.sessionFile))),
+				!(s.sessionFile && (internal.has(sessionPathKey(s.sessionFile)) || deps.isHiddenSessionFile?.(s.sessionFile))),
 			);
 			const workspaceRoots: WorkspaceRoots = { projectRoots: configuredCreateRoots };
 			const roots = (configuredCreateRoots.length > 0 ? configuredCreateRoots : [os.homedir()])
@@ -748,6 +751,18 @@ export function createApi(deps: ApiDeps): (req: Request) => Promise<Response> {
 			return json(200, body);
 		}
 
+		if (pathname === "/api/new-session/browse") {
+			allow(req, "GET");
+			const directory = url.searchParams.get("dir");
+			if (directory !== null && (directory.length > 4096 || directory.includes("\u0000") || !path.isAbsolute(directory))) {
+				throw new HttpError(400, "bad-request", "dir must be an absolute folder path of at most 4096 non-NUL characters");
+			}
+			const body: NewSessionBrowseResponse = await browseNewSessionDirectory(directory ?? undefined, {
+				projectRoots: configuredCreateRoots,
+			});
+			return json(200, body);
+		}
+
 		if (pathname === "/api/search") {
 			allow(req, "GET");
 			const query = url.searchParams.get("q");
@@ -755,10 +770,10 @@ export function createApi(deps: ApiDeps): (req: Request) => Promise<Response> {
 				throw new HttpError(400, "bad-request", "q must be 1-512 non-NUL characters");
 			}
 			const live = supervisor.list();
-			const hiddenFiles = new Set(live.filter(session => session.hidden && session.sessionFile).map(session => session.sessionFile!));
+			const hiddenFiles = new Set(live.filter(session => session.hidden && session.sessionFile).map(session => sessionPathKey(session.sessionFile!)));
 			const sessions = [...live, ...(await deps.listRecent())].filter(session =>
 				!session.hidden &&
-				!(session.sessionFile && (hiddenFiles.has(session.sessionFile) || deps.isHiddenSessionFile?.(session.sessionFile)))
+				!(session.sessionFile && (hiddenFiles.has(sessionPathKey(session.sessionFile)) || deps.isHiddenSessionFile?.(session.sessionFile)))
 			);
 			const body: TranscriptSearchResponse = await searchTranscriptFiles(
 				sessions,
@@ -802,10 +817,11 @@ export function createApi(deps: ApiDeps): (req: Request) => Promise<Response> {
 				request = { ...rest, forkFrom: { sessionFile: resumeFile } };
 			}
 			const sourceFile = request.resumeSessionFile ?? request.forkFrom?.sessionFile;
-			if (sourceFile !== undefined && deletingFiles.has(sourceFile)) {
+			const sourceFileKey = sourceFile === undefined ? undefined : sessionPathKey(sourceFile);
+			if (sourceFileKey !== undefined && deletingFiles.has(sourceFileKey)) {
 				throw new HttpError(409, "conflict", "this session is being deleted");
 			}
-			if (sourceFile !== undefined) startingFiles.set(sourceFile, (startingFiles.get(sourceFile) ?? 0) + 1);
+			if (sourceFileKey !== undefined) startingFiles.set(sourceFileKey, (startingFiles.get(sourceFileKey) ?? 0) + 1);
 			try {
 				const archived = request.resumeSessionFile ? deps.archiveStore.findBySessionFile(request.resumeSessionFile) : undefined;
 				if (archived) await deps.archiveStore.restore(archived.id);
@@ -821,10 +837,10 @@ export function createApi(deps: ApiDeps): (req: Request) => Promise<Response> {
 				deps.archiveStore.revive(created.id);
 				return json(201, created);
 			} finally {
-				if (sourceFile !== undefined) {
-					const holders = (startingFiles.get(sourceFile) ?? 1) - 1;
-					if (holders > 0) startingFiles.set(sourceFile, holders);
-					else startingFiles.delete(sourceFile);
+				if (sourceFileKey !== undefined) {
+					const holders = (startingFiles.get(sourceFileKey) ?? 1) - 1;
+					if (holders > 0) startingFiles.set(sourceFileKey, holders);
+					else startingFiles.delete(sourceFileKey);
 				}
 			}
 		}
@@ -1071,7 +1087,16 @@ export function createApi(deps: ApiDeps): (req: Request) => Promise<Response> {
 			// Delete is the second step after Archive: a session the user never archived, or one running again, is refused.
 			const record = deps.archiveStore.get(id);
 			if (!record) throw new HttpError(409, "conflict", "only archived sessions can be deleted; archive it first");
-			if (supervisor.list().some(session => session.id === id || (record.sessionFile !== undefined && session.sessionFile === record.sessionFile))) {
+			const recordFileKey = record.sessionFile === undefined ? undefined : sessionPathKey(record.sessionFile);
+			if (
+				supervisor.list().some(
+					session =>
+						session.id === id ||
+						(recordFileKey !== undefined &&
+							session.sessionFile !== undefined &&
+							sessionPathKey(session.sessionFile) === recordFileKey),
+				)
+			) {
 				throw new HttpError(409, "conflict", "session is running; end it first");
 			}
 			if (!deps.trashSessionFile) throw new HttpError(501, "internal", "this daemon cannot delete sessions");
@@ -1085,21 +1110,24 @@ export function createApi(deps: ApiDeps): (req: Request) => Promise<Response> {
 				if (info?.isSymbolicLink()) throw new HttpError(400, "bad-request", "session file is a symbolic link; not deleted");
 				if (info) file = await requireSessionFile(record.sessionFile, deps.sessionsDir);
 			}
+			const fileKey = file === undefined ? undefined : sessionPathKey(file);
 			// Re-check after the waits above, then claim the file before the move: nothing awaits in between.
 			if (
 				deps.archiveStore.get(id) === undefined ||
 				supervisor.list().some(session => session.id === id) ||
-				(file !== undefined && (startingFiles.has(file) || deletingFiles.has(file) || supervisor.findBySessionFile(file)))
+				(file !== undefined &&
+					fileKey !== undefined &&
+					(startingFiles.has(fileKey) || deletingFiles.has(fileKey) || supervisor.findBySessionFile(file)))
 			) {
 				throw new HttpError(409, "conflict", "session is starting, running or already being deleted");
 			}
 			let trashedTo: string | null = null;
-			if (file !== undefined) {
-				deletingFiles.add(file);
+			if (file !== undefined && fileKey !== undefined) {
+				deletingFiles.add(fileKey);
 				try {
 					trashedTo = await deps.trashSessionFile(file);
 				} finally {
-					deletingFiles.delete(file);
+					deletingFiles.delete(fileKey);
 				}
 			}
 			await deps.archiveStore.forget(id);
@@ -1209,11 +1237,11 @@ export function createApi(deps: ApiDeps): (req: Request) => Promise<Response> {
 		const pinnedIds = new Set(pinStore === undefined ? [] : await pinStore.list());
 		const markPinned = (session: SessionSummary): SessionSummary => ({ ...session, pinned: pinnedIds.has(session.id) });
 		const all = supervisor.list();
-		const hiddenFiles = new Set(all.flatMap(s => (s.hidden && s.sessionFile ? [s.sessionFile] : [])));
+		const hiddenFiles = new Set(all.flatMap(s => (s.hidden && s.sessionFile ? [sessionPathKey(s.sessionFile)] : [])));
 		const live = all.filter(s => !s.hidden && !deps.archiveStore.isArchived(s.id)).map(markPinned);
-		const liveFiles = new Set(all.flatMap(s => (s.sessionFile ? [s.sessionFile] : [])));
+		const liveFiles = new Set(all.flatMap(s => (s.sessionFile ? [sessionPathKey(s.sessionFile)] : [])));
 		const liveIds = new Set(all.map(s => s.id));
-		await deps.hostedSessions?.remember(liveFiles);
+		await deps.hostedSessions?.remember(all.flatMap(s => (s.sessionFile ? [s.sessionFile] : [])));
 		// A saved session this daemon hosted continues in place; anything else came from terminal omp and opens as a copy.
 		const labelled = (session: SessionSummary): SessionSummary => {
 			if (session.sessionFile === undefined || !deps.hostedSessions?.has(session.sessionFile)) return session;
@@ -1224,8 +1252,8 @@ export function createApi(deps: ApiDeps): (req: Request) => Promise<Response> {
 		const persistedById = new Map(persisted.map(session => [session.id, session]));
 		const recent: SessionSummary[] = persisted
 			.filter(s => !deps.archiveStore.isArchived(s.id))
-			.filter(s => !liveIds.has(s.id) && !(s.sessionFile && liveFiles.has(s.sessionFile)))
-			.filter(s => !(s.sessionFile && (hiddenFiles.has(s.sessionFile) || deps.isHiddenSessionFile?.(s.sessionFile))))
+			.filter(s => !liveIds.has(s.id) && !(s.sessionFile && liveFiles.has(sessionPathKey(s.sessionFile))))
+			.filter(s => !(s.sessionFile && (hiddenFiles.has(sessionPathKey(s.sessionFile)) || deps.isHiddenSessionFile?.(s.sessionFile))))
 			.sort((a, b) => b.lastActivityAt - a.lastActivityAt)
 			.slice(0, limit)
 			.map(markPinned);
@@ -1237,8 +1265,8 @@ export function createApi(deps: ApiDeps): (req: Request) => Promise<Response> {
 				const source = persistedById.get(id);
 				if (
 					source?.hidden ||
-					(source?.sessionFile && (hiddenFiles.has(source.sessionFile) || deps.isHiddenSessionFile?.(source.sessionFile))) ||
-					(record.sessionFile && (hiddenFiles.has(record.sessionFile) || deps.isHiddenSessionFile?.(record.sessionFile)))
+					(source?.sessionFile && (hiddenFiles.has(sessionPathKey(source.sessionFile)) || deps.isHiddenSessionFile?.(source.sessionFile))) ||
+					(record.sessionFile && (hiddenFiles.has(sessionPathKey(record.sessionFile)) || deps.isHiddenSessionFile?.(record.sessionFile)))
 				) {
 					return [];
 				}
@@ -1280,6 +1308,7 @@ export function createApi(deps: ApiDeps): (req: Request) => Promise<Response> {
 				const status = err.code === "not-found" ? 404 : 400;
 				return errorResponse(status, err.code, err.message);
 			}
+			if (err instanceof NewSessionBrowseError) return errorResponse(err.status, err.code, err.message);
 			if (err instanceof RecentSessionScanError || err instanceof PathSuggestionError) {
 				deps.log(`api ${req.method} ${new URL(req.url).pathname} failed: ${err.message}`);
 				return errorResponse(500, "internal", err.message);

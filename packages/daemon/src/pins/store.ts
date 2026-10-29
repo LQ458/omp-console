@@ -1,6 +1,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { atomicWriteFile } from "../workspaces/files";
+import { isWindows } from "../platform";
 
 interface PinFile {
 	version: 1;
@@ -96,7 +97,7 @@ export class PinStore {
 			return;
 		}
 		this.#sessionIds = new Set(parsed.sessionIds);
-		await fs.chmod(this.#file, 0o600);
+		if (!isWindows) await fs.chmod(this.#file, 0o600);
 	}
 
 	#enqueue<T>(operation: () => Promise<T>): Promise<T> {

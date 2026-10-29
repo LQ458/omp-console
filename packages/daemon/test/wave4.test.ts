@@ -52,7 +52,7 @@ describe("persistent pins", () => {
 
 		const reopened = new PinStore(daemon.stateDir);
 		expect(await reopened.list()).toEqual(["saved-1"]);
-		expect(fs.statSync(path.join(daemon.stateDir, "pinned-sessions.json")).mode & 0o777).toBe(0o600);
+		if (process.platform !== "win32") expect(fs.statSync(path.join(daemon.stateDir, "pinned-sessions.json")).mode & 0o777).toBe(0o600);
 
 		const unpin = await daemon.put("/api/pins/saved-1", { pinned: false });
 		expect(unpin.status).toBe(200);

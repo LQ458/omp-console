@@ -4,6 +4,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { isEnoent } from "@oh-my-pi/pi-utils/fs-error";
 import { parseDraftPlan, validateDraftPlanStructure } from "./runner";
+import { isWindows } from "../platform";
 
 export const PLAN_TEMPLATE_NAME = /^[A-Za-z0-9][A-Za-z0-9 _.-]{0,63}$/;
 
@@ -32,9 +33,9 @@ export class PlanTemplates {
 		const temporary = `${file}.${crypto.randomUUID()}.tmp`;
 		try {
 			await fs.writeFile(temporary, `${JSON.stringify(template)}\n`, { encoding: "utf8", flag: "wx", mode: 0o600 });
-			await fs.chmod(temporary, 0o600);
+			if (!isWindows) await fs.chmod(temporary, 0o600);
 			await fs.rename(temporary, file);
-			await fs.chmod(file, 0o600);
+			if (!isWindows) await fs.chmod(file, 0o600);
 		} catch (error) {
 			await fs.rm(temporary, { force: true }).catch(() => {});
 			throw error;
@@ -63,7 +64,7 @@ export class PlanTemplates {
 			if (!parsed) throw new Error(`plan template ${JSON.stringify(name)} is invalid`);
 			validateDraftPlanStructure(parsed);
 			parsed.name = name;
-			await fs.chmod(file, 0o600);
+			if (!isWindows) await fs.chmod(file, 0o600);
 			templates.push(parsed);
 		}
 		return templates;

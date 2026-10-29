@@ -4,25 +4,23 @@
  * validation again.
  */
 import type { Workspace, WorkspaceKind, WorkspaceRuleFile } from "@omp-console/protocol";
+import { isInside, pathKey } from "./native-path";
 
-function trimSlashes(path: string): string {
-	return path.length > 1 ? path.replace(/\/+$/, "") : path;
-}
 
 /**
- * Longest-prefix match on a path boundary: `/a/b` owns `/a/b` and `/a/b/c` but not `/a/bc`.
+ * Longest-prefix match on a path boundary: `/a/b` owns `/a/b` and `/a/b/c` but not `/a/bc`; Windows paths compare
+ * case-insensitively and accept either separator.
  * A session started in a subdirectory of a workspace belongs to it.
  */
 export function workspaceOf(workspaces: readonly Workspace[], cwd: string): Workspace | undefined {
-	const target = trimSlashes(cwd);
 	let best: Workspace | undefined;
 	let bestLength = -1;
 	for (const workspace of workspaces) {
-		const root = trimSlashes(workspace.root);
-		const inside = target === root || target.startsWith(root === "/" ? "/" : `${root}/`);
-		if (inside && root.length > bestLength) {
+		const rootKey = pathKey(workspace.root).replace(/\/+$/, "");
+		const rootLength = rootKey.length || (workspace.root === "/" ? 1 : 0);
+		if (isInside(workspace.root, cwd) && rootLength > bestLength) {
 			best = workspace;
-			bestLength = root.length;
+			bestLength = rootLength;
 		}
 	}
 	return best;

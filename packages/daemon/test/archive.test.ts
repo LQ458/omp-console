@@ -22,7 +22,7 @@ describe("ArchiveStore", () => {
 		const first = await ArchiveStore.open(stateDir);
 		expect(first.isArchived("saved")).toBe(false);
 		await first.archive("saved", record);
-		expect(fs.statSync(path.join(stateDir, "archived-sessions.json")).mode & 0o777).toBe(0o600);
+		if (process.platform !== "win32") expect(fs.statSync(path.join(stateDir, "archived-sessions.json")).mode & 0o777).toBe(0o600);
 
 		const reopened = await ArchiveStore.open(stateDir);
 		expect(reopened.get("saved")).toEqual(record);
